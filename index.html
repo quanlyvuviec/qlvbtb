@@ -253,13 +253,102 @@
   .donut-legend-item { display:flex; align-items:center; gap:8px; font-size:12px; }
   .donut-legend-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
 
-  /* ===== RESPONSIVE ===== */
-  @media(max-width:768px){
-    .sidebar{display:none;}
-    .main{margin-left:0;}
-    .form-grid{grid-template-columns:1fr;}
-    .topbar-title span{display:none;}
-    .stat-grid{grid-template-columns:1fr 1fr;}
+  /* ===== RESPONSIVE — MOBILE FIRST ===== */
+
+  /* Mobile bottom navigation */
+  .mobile-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+    background: var(--bg2); border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 16px rgba(10,45,78,0.12);
+    padding: 4px 0 env(safe-area-inset-bottom,4px);
+  }
+  .mobile-nav-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+  }
+  .mobile-nav-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 6px 2px; cursor: pointer; color: var(--text3); font-size: 9px;
+    gap: 2px; position: relative; transition: color .15s; border: none; background: none;
+  }
+  .mobile-nav-item.active { color: var(--navy); }
+  .mobile-nav-item .mni { font-size: 20px; line-height: 1; }
+  .mobile-nav-item .mnl { font-size: 8.5px; font-weight: 600; text-align: center; line-height: 1.2; }
+  .mobile-nav-badge {
+    position: absolute; top: 2px; right: 8px;
+    background: var(--red-warn); color: #fff; border-radius: 10px;
+    padding: 0 4px; font-size: 9px; font-weight: 700; min-width: 16px; text-align: center;
+  }
+  /* Sidebar overlay for mobile */
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 150;
+  }
+  .sidebar-overlay.open { display: block; }
+
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); transition: transform .28s cubic-bezier(.4,0,.2,1); z-index: 160; }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; padding-bottom: 70px; }
+    .page { padding: 12px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .topbar-title span { display: none; }
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    .mobile-nav { display: block; }
+    .topbar { padding: 0 10px; gap: 8px; }
+    .topbar-logo { font-size: 22px; }
+    .topbar-title { font-size: 11px; }
+    .topbar-right { gap: 5px; }
+    .topbar-btn { padding: 4px 8px; font-size: 11px; }
+    .warn-badge { padding: 2px 7px; font-size: 11px; }
+    /* Add hamburger menu button to topbar */
+    .topbar-menu-btn {
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+      color: #fff; padding: 5px 9px; border-radius: 6px; cursor: pointer;
+      font-size: 16px; line-height: 1; flex-shrink: 0;
+    }
+    /* Tables scroll horizontally on mobile */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-wrap table { min-width: 680px; }
+    /* Modal full screen on mobile */
+    .modal { max-width: 100%; max-height: 96vh; border-radius: 16px 16px 0 0; }
+    .modal-overlay { padding: 0; align-items: flex-end; }
+    /* Stats responsive */
+    .stats-donut-wrap { flex-direction: column; gap: 12px; }
+    /* Settings responsive */
+    .input-row { grid-template-columns: 1fr; }
+    /* Hide desktop sync status text on mobile */
+    .sync-status span { display: none; }
+    /* Bottom toast position for mobile */
+    #toastContainer { bottom: 80px; right: 12px; left: 12px; }
+    .toast { max-width: 100%; }
+    /* Page header wrapping on mobile */
+    .page-header { flex-direction: column; gap: 8px; }
+    .page-header-left h1 { font-size: 17px; }
+    /* Toolbar wrapping on mobile */
+    .toolbar { gap: 6px; }
+    .search-box input { min-width: 140px; }
+    .filter-select { font-size: 12px; }
+    /* Settings cards */
+    .settings-card { padding: 14px; }
+    /* Dashboard charts side by side on mobile */
+    #dashChartsGrid { grid-template-columns: 1fr !important; }
+  }
+
+  @media (max-width: 480px) {
+    .stat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-card { padding: 12px 14px; }
+    .stat-card .value { font-size: 24px; }
+    .mobile-nav-grid { grid-template-columns: repeat(7, 1fr); }
+    .mobile-nav-item .mni { font-size: 18px; }
+    .mobile-nav-item .mnl { font-size: 8px; }
+    .login-box { width: 95vw; padding: 1.8rem 1.2rem; }
+    .login-emblem { font-size: 50px; }
+  }
+
+  @media (min-width: 769px) {
+    .topbar-menu-btn { display: none; }
+    .mobile-nav { display: none !important; }
+    .sidebar { transform: none !important; }
   }
 </style>
 </head>
@@ -286,6 +375,7 @@
 <div id="app">
   <!-- TOPBAR -->
   <div class="topbar">
+    <button class="topbar-menu-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
     <div class="topbar-logo">🛡️</div>
     <div class="topbar-title">
       QUẢN LÝ VĂN BẢN ĐẾN & TIN BÁO TỐ GIÁC
@@ -329,9 +419,40 @@
     <div class="nav-item" onclick="showPage('settings')" data-page="settings">
       <span class="icon">⚙️</span> Cài đặt
     </div>
-  </div>
+  </div><!-- /sidebar -->
 
-  <!-- MAIN CONTENT -->
+  <!-- Sidebar overlay for mobile -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+  <!-- Mobile bottom navigation -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-grid">
+      <button class="mobile-nav-item active" id="mni-dashboard" onclick="showPage('dashboard');closeSidebar()">
+        <span class="mni">📊</span><span class="mnl">Tổng quan</span>
+      </button>
+      <button class="mobile-nav-item" id="mni-docs" onclick="showPage('docs');closeSidebar()">
+        <span class="mni">📋</span><span class="mnl">Văn bản</span>
+        <span class="mobile-nav-badge" id="mni-badge-docs" style="display:none">0</span>
+      </button>
+      <button class="mobile-nav-item" id="mni-petitions" onclick="showPage('petitions');closeSidebar()">
+        <span class="mni">📩</span><span class="mnl">Đơn thư</span>
+        <span class="mobile-nav-badge" id="mni-badge-pets" style="display:none">0</span>
+      </button>
+      <button class="mobile-nav-item" id="mni-warnings" onclick="showPage('warnings');closeSidebar()">
+        <span class="mni">⚠️</span><span class="mnl">Cảnh báo</span>
+        <span class="mobile-nav-badge" id="mni-badge-warn" style="display:none">0</span>
+      </button>
+      <button class="mobile-nav-item" id="mni-stats" onclick="showPage('stats');closeSidebar()">
+        <span class="mni">📈</span><span class="mnl">Thống kê</span>
+      </button>
+      <button class="mobile-nav-item" id="mni-report" onclick="showPage('report');closeSidebar()">
+        <span class="mni">📄</span><span class="mnl">Báo cáo</span>
+      </button>
+      <button class="mobile-nav-item" id="mni-settings" onclick="showPage('settings');closeSidebar()">
+        <span class="mni">⚙️</span><span class="mnl">Cài đặt</span>
+      </button>
+    </div>
+  </nav>
   <div class="main">
 
     <!-- ========= DASHBOARD ========= -->
@@ -344,7 +465,7 @@
       </div>
       <div class="stat-grid" id="dashStats"></div>
       <div id="warnPanel"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-wrap:wrap">
+      <div id="dashChartsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-wrap:wrap">
         <div class="table-wrap" style="padding:18px">
           <div style="font-weight:800;color:var(--navy);margin-bottom:14px;font-size:14px">📋 Phân loại văn bản đến</div>
           <div id="docTypeChart"></div>
@@ -546,7 +667,7 @@
           <span class="firebase-status disconnected" id="fbStatus">● Chưa kết nối</span>
         </h3>
         <div class="alert-box alert-info" style="margin-bottom:14px">
-          Nhập thông tin Firebase project của đơn vị để đồng bộ dữ liệu realtime lên cloud. Lấy config tại <b>Firebase Console → Project Settings → Your apps</b>.
+          Nhập thông tin Firebase project để đồng bộ dữ liệu realtime (văn bản, đơn thư, file PDF) lên cloud — mọi thiết bị kết nối sẽ thấy dữ liệu giống nhau.
         </div>
         <div class="input-row" style="margin-bottom:10px">
           <div class="form-group"><label>API Key</label><input class="form-control" id="fb_apiKey" placeholder="AIzaSy..."></div>
@@ -554,15 +675,29 @@
           <div class="form-group"><label>Project ID</label><input class="form-control" id="fb_projectId" placeholder="my-project"></div>
           <div class="form-group"><label>Storage Bucket</label><input class="form-control" id="fb_storageBucket" placeholder="my-project.appspot.com"></div>
         </div>
-        <div style="display:flex;gap:10px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="connectFirebase()">🔗 Kết nối Firebase</button>
           <button class="btn btn-outline" onclick="disconnectFirebase()">Ngắt kết nối</button>
           <button class="btn btn-success" onclick="syncToFirebase()" id="btnSync" style="display:none">☁️ Đồng bộ ngay</button>
         </div>
+        <!-- Link chia sẻ tự động kết nối (hiện ra sau khi kết nối) -->
+        <div id="fbShareLinkWrap" style="display:none;margin-top:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px">
+            🔗 Link chia sẻ — Mở link này trên thiết bị khác để tự động kết nối Firebase:
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="form-control" id="fbShareLink" readonly style="font-size:11px;background:#f8fafc;font-family:monospace">
+            <button class="btn btn-outline btn-sm" onclick="copyShareLink()" style="flex-shrink:0">📋 Sao chép</button>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:5px">
+            💡 Dán link vào GitHub Pages URL. Thiết bị mới mở link sẽ tự kết nối Firebase mà không cần nhập lại API Key.
+          </div>
+        </div>
         <div class="code-block" style="margin-top:14px;font-size:11px">
-// Hướng dẫn: Sau khi kết nối Firebase, dữ liệu sẽ tự động đồng bộ<br>
-// mỗi khi thêm/sửa/xóa văn bản hoặc đơn thư.<br>
-// Backup thủ công: Cài đặt → Sao lưu → Backup JSON
+✅ Đồng bộ realtime: văn bản, đơn thư, cán bộ<br>
+✅ File PDF tự động tải từ cloud khi thiết bị khác xem<br>
+✅ Thiết bị mới: dùng link chia sẻ để tự kết nối<br>
+📌 Backup thủ công: Cài đặt → Sao lưu → Backup JSON
         </div>
       </div>
 
@@ -986,19 +1121,41 @@ function loadLocal(){
   }catch(e){ console.warn('Tải dữ liệu thất bại:', e); }
 }
 
-// Lưu file vào IDB
+// Lưu file vào IDB (local) + Firebase (cloud)
 async function saveFileToIDB(entityType, id, fileType, base64Data){
   if(!base64Data) return;
+  // Luôn lưu local IDB trước
   await idbSet(`${entityType}_${id}_${fileType}`, base64Data);
+  // Đồng bộ lên Firebase nếu đã kết nối
+  if(firebaseConnected && fbDB){
+    savePdfToFirebase(entityType, id, fileType, base64Data).catch(e=>console.warn('PDF Firebase sync error:',e));
+  }
 }
-// Lấy file từ IDB
+// Lấy file từ IDB, fallback sang Firebase nếu không có local
 async function getFileFromIDB(entityType, id, fileType){
-  return await idbGet(`${entityType}_${id}_${fileType}`);
+  // Thử IDB local trước (nhanh nhất)
+  let data=await idbGet(`${entityType}_${id}_${fileType}`);
+  if(data) return data;
+  // Fallback: tải từ Firebase
+  if(firebaseConnected && fbDB){
+    showToast('⏳ Đang tải file PDF từ cloud...','info');
+    data=await loadPdfFromFirebase(entityType, id, fileType);
+    if(data){
+      // Cache vào IDB local để lần sau nhanh hơn
+      await idbSet(`${entityType}_${id}_${fileType}`, data);
+      showToast('✅ Đã tải PDF từ cloud!');
+    }
+  }
+  return data;
 }
-// Xóa file khỏi IDB
+// Xóa file khỏi IDB + Firebase
 async function deleteFilesFromIDB(entityType, id){
   await idbDel(`${entityType}_${id}_content`);
   await idbDel(`${entityType}_${id}_result`);
+  if(firebaseConnected && fbDB){
+    deletePdfFromFirebase(entityType, id, 'content').catch(()=>{});
+    deletePdfFromFirebase(entityType, id, 'result').catch(()=>{});
+  }
 }
 
 // ============ LOGIN ============
@@ -1013,17 +1170,35 @@ function doLogout(){
   document.getElementById('loginErr').textContent='';
 }
 
+// ============ MOBILE SIDEBAR ============
+function toggleSidebar(){
+  const sb=document.querySelector('.sidebar');
+  const ov=document.getElementById('sidebarOverlay');
+  const isOpen=sb.classList.contains('open');
+  if(isOpen){ sb.classList.remove('open'); ov.classList.remove('open'); }
+  else { sb.classList.add('open'); ov.classList.add('open'); }
+}
+function closeSidebar(){
+  document.querySelector('.sidebar')?.classList.remove('open');
+  document.getElementById('sidebarOverlay')?.classList.remove('open');
+}
+
 // ============ NAVIGATION ============
 function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+name)?.classList.add('active');
   document.querySelector('[data-page="'+name+'"]')?.classList.add('active');
+  // Sync mobile nav
+  document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mni-'+name)?.classList.add('active');
   if(name==='dashboard') renderDashboard();
   if(name==='docs') renderDocs();
   if(name==='petitions') renderPets();
   if(name==='warnings') renderWarnings();
   if(name==='stats') renderStats();
+  if(name==='settings') renderOfficers();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 // ============ RENDER ALL ============
@@ -1040,6 +1215,7 @@ function updateNavCounts(){
   document.getElementById('navCountDocs').textContent=docs.length;
   document.getElementById('navCountPets').textContent=pets.length;
   const w=getWarnings();
+  // Desktop sidebar badges
   if(w.length>0){
     document.getElementById('navCountWarn').textContent=w.length;
     document.getElementById('navCountWarn').style.display='inline';
@@ -1049,6 +1225,13 @@ function updateNavCounts(){
     document.getElementById('navCountWarn').style.display='none';
     document.getElementById('warnBadge').style.display='none';
   }
+  // Mobile nav badges
+  const bdocs=document.getElementById('mni-badge-docs');
+  const bpets=document.getElementById('mni-badge-pets');
+  const bwarn=document.getElementById('mni-badge-warn');
+  if(bdocs){ bdocs.textContent=docs.length; bdocs.style.display=docs.length?'block':'none'; }
+  if(bpets){ bpets.textContent=pets.length; bpets.style.display=pets.length?'block':'none'; }
+  if(bwarn){ bwarn.textContent=w.length; bwarn.style.display=w.length?'block':'none'; }
 }
 function updateWarnBadge(){ updateNavCounts(); }
 
@@ -1764,14 +1947,17 @@ function renderOfficers(){
 function addOfficer(){
   const n=document.getElementById('newOfficerName').value.trim();
   if(!n) return;
-  if(officers.includes(n)){ alert('Cán bộ này đã có trong danh sách!'); return; }
+  if(officers.includes(n)){ showToast('Cán bộ này đã có trong danh sách!','info'); return; }
   officers.push(n);
   document.getElementById('newOfficerName').value='';
   saveLocal(); renderOfficers(); populateOfficerDropdowns();
+  syncOfficersToFirebase();
 }
 function deleteOfficer(i){
   if(!confirm('Xóa cán bộ "'+officers[i]+'"?')) return;
-  officers.splice(i,1); saveLocal(); renderOfficers(); populateOfficerDropdowns();
+  officers.splice(i,1);
+  saveLocal(); renderOfficers(); populateOfficerDropdowns();
+  syncOfficersToFirebase();
 }
 
 // ============ EXPORT WORD — Landscape A4, chuẩn mẫu VN ============
@@ -2430,14 +2616,21 @@ function doRestore(e){
 }
 
 // ============ FIREBASE ============
-let fbApp=null, fbDB=null;
+let fbApp=null, fbDB=null, fbStorage=null;
+
+// Lưu Firebase config vào cả localStorage VÀ Firestore để đồng bộ đa thiết bị
+const FB_CONFIG_KEY='fb_config';
 
 function checkFirebaseConfig(){
-  const cfg=JSON.parse(_storeGet('fb_config')||'{}');
+  const cfg=JSON.parse(_storeGet(FB_CONFIG_KEY)||'{}');
   const el_key=document.getElementById('fb_apiKey');
   const el_hint=document.getElementById('fbSetupHint');
   if(cfg.apiKey){
-    if(el_key){ document.getElementById('fb_apiKey').value=cfg.apiKey||''; }
+    if(el_key) el_key.value=cfg.apiKey||'';
+    ['fb_authDomain','fb_projectId','fb_storageBucket'].forEach(id=>{
+      const k=id.replace('fb_',''); const el=document.getElementById(id);
+      if(el) el.value=cfg[k]||cfg[id.replace('fb_','').replace(/([A-Z])/g,'_$1').toLowerCase()]||'';
+    });
     if(document.getElementById('fb_authDomain')) document.getElementById('fb_authDomain').value=cfg.authDomain||'';
     if(document.getElementById('fb_projectId')) document.getElementById('fb_projectId').value=cfg.projectId||'';
     if(document.getElementById('fb_storageBucket')) document.getElementById('fb_storageBucket').value=cfg.storageBucket||'';
@@ -2455,13 +2648,52 @@ function connectFirebase(){
     projectId:document.getElementById('fb_projectId').value.trim(),
     storageBucket:document.getElementById('fb_storageBucket').value.trim()
   };
-  if(!cfg.apiKey||!cfg.projectId){ alert('Vui lòng nhập ít nhất API Key và Project ID!'); return; }
+  if(!cfg.apiKey||!cfg.projectId){ showToast('❌ Vui lòng nhập API Key và Project ID!','error'); return; }
   try{
     initFirebase(cfg);
-    _storeSet('fb_config',JSON.stringify(cfg));
-    alert('✅ Kết nối Firebase thành công! Đang đồng bộ dữ liệu...');
+    // Lưu config local
+    _storeSet(FB_CONFIG_KEY, JSON.stringify(cfg));
+    // Lưu config lên Firestore để các thiết bị khác tự động kết nối
+    saveConfigToFirestore(cfg);
+    showToast('✅ Kết nối Firebase thành công!');
     syncToFirebase();
-  }catch(e){ alert('❌ Lỗi kết nối Firebase: '+e.message); }
+  }catch(e){ showToast('❌ Lỗi kết nối Firebase: '+e.message,'error'); }
+}
+
+async function saveConfigToFirestore(cfg){
+  if(!fbDB) return;
+  try{
+    // Lưu config vào collection _config (không nhạy cảm, chỉ là project config)
+    await fbDB.collection('_config').doc('app').set({
+      fbConfig: JSON.stringify(cfg),
+      updatedAt: new Date().toISOString()
+    });
+  }catch(e){ console.warn('Không thể lưu config lên Firestore:', e); }
+}
+
+// Khi mở app: thử lấy config từ URL params hoặc Firestore
+async function tryAutoConnectFromCloud(){
+  // Thử kết nối bằng config đã biết projectId từ URL hash
+  // URL format: yourapp.html#pid=project-id
+  const hash=location.hash.slice(1);
+  const params=new URLSearchParams(hash);
+  const pid=params.get('pid');
+  if(pid && !_storeGet(FB_CONFIG_KEY)){
+    // Thử bootstrap từ projectId: dùng anonymous Firestore REST để lấy config
+    try{
+      const res=await fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/_config/app`);
+      if(res.ok){
+        const data=await res.json();
+        const cfgStr=data?.fields?.fbConfig?.stringValue;
+        if(cfgStr){
+          const cfg=JSON.parse(cfgStr);
+          _storeSet(FB_CONFIG_KEY, JSON.stringify(cfg));
+          initFirebase(cfg);
+          console.log('✅ Auto-connected from Firestore config');
+        }
+      }
+    }catch(e){ console.warn('Auto-connect from URL failed:', e); }
+  }
 }
 
 function initFirebase(cfg){
@@ -2475,7 +2707,9 @@ function initFirebase(cfg){
     document.getElementById('syncDot').className='sync-dot';
     document.getElementById('syncText').textContent='Firebase';
     document.getElementById('btnSync').style.display='inline-flex';
-    // Realtime listener
+    // Thêm nút copy link kết nối
+    updateShareLink(cfg.projectId);
+    // Realtime listeners
     fbDB.collection('docs').onSnapshot(snap=>{
       docs=snap.docs.map(d=>({...d.data(),id:d.id}));
       saveLocal(); renderAll(); updateWarnBadge();
@@ -2484,7 +2718,32 @@ function initFirebase(cfg){
       pets=snap.docs.map(d=>({...d.data(),id:d.id}));
       saveLocal(); renderAll();
     });
+    // Realtime sync officers
+    fbDB.collection('_config').doc('officers').onSnapshot(snap=>{
+      const data=snap.data();
+      if(data?.list){
+        officers=data.list;
+        _storeSet('pb_officers',JSON.stringify(officers));
+        populateOfficerDropdowns();
+      }
+    });
   }catch(e){ firebaseConnected=false; throw e; }
+}
+
+function updateShareLink(projectId){
+  if(!projectId) return;
+  const link=location.href.split('#')[0]+'#pid='+projectId;
+  const shareEl=document.getElementById('fbShareLink');
+  const shareWrap=document.getElementById('fbShareLinkWrap');
+  if(shareEl){ shareEl.value=link; }
+  if(shareWrap){ shareWrap.style.display='block'; }
+}
+
+function copyShareLink(){
+  const el=document.getElementById('fbShareLink');
+  if(!el) return;
+  navigator.clipboard?.writeText(el.value).then(()=>showToast('✅ Đã sao chép link kết nối!'))
+    .catch(()=>{ el.select(); document.execCommand('copy'); showToast('✅ Đã sao chép!'); });
 }
 
 function disconnectFirebase(){
@@ -2494,39 +2753,112 @@ function disconnectFirebase(){
   document.getElementById('syncDot').className='sync-dot off';
   document.getElementById('syncText').textContent='Offline';
   document.getElementById('btnSync').style.display='none';
-  _storeRemove('fb_config');
+  _storeRemove(FB_CONFIG_KEY);
+  const shareWrap=document.getElementById('fbShareLinkWrap');
+  if(shareWrap) shareWrap.style.display='none';
 }
 
 async function syncToFirebase(){
-  if(!fbDB){ alert('Chưa kết nối Firebase!'); return; }
+  if(!fbDB){ showToast('❌ Chưa kết nối Firebase!','error'); return; }
   try{
     const batch=fbDB.batch();
-    docs.forEach(d=>{ const ref=fbDB.collection('docs').doc(d.id); batch.set(ref,{...d,fileContentData:null,fileResultData:null}); });
-    pets.forEach(p=>{ const ref=fbDB.collection('pets').doc(p.id); batch.set(ref,{...p,fileContentData:null,fileResultData:null}); });
+    docs.forEach(d=>{ const ref=fbDB.collection('docs').doc(d.id); batch.set(ref,stripFileData(d)); });
+    pets.forEach(p=>{ const ref=fbDB.collection('pets').doc(p.id); batch.set(ref,stripFileData(p)); });
     await batch.commit();
-    alert('✅ Đồng bộ Firebase thành công!');
-  }catch(e){ alert('❌ Lỗi đồng bộ: '+e.message); }
+    // Sync officers
+    await fbDB.collection('_config').doc('officers').set({list:officers,updatedAt:new Date().toISOString()});
+    showToast('✅ Đồng bộ Firebase thành công!');
+  }catch(e){ showToast('❌ Lỗi đồng bộ: '+e.message,'error'); }
+}
+
+function stripFileData(rec){
+  const c={...rec}; delete c.fileContentData; delete c.fileResultData; return c;
 }
 
 function syncDocToFirebase(rec){
   if(!fbDB) return;
-  fbDB.collection('docs').doc(rec.id).set({...rec,fileContentData:null,fileResultData:null}).catch(e=>console.error(e));
+  fbDB.collection('docs').doc(rec.id).set(stripFileData(rec)).catch(e=>console.error(e));
+  // Sync officers khi thêm văn bản (officers có thể đã thay đổi)
+  syncOfficersToFirebase();
 }
 function syncPetToFirebase(rec){
   if(!fbDB) return;
-  fbDB.collection('pets').doc(rec.id).set({...rec,fileContentData:null,fileResultData:null}).catch(e=>console.error(e));
+  fbDB.collection('pets').doc(rec.id).set(stripFileData(rec)).catch(e=>console.error(e));
 }
-function deleteDocFromFirebase(id){ if(fbDB) fbDB.collection('docs').doc(id).delete().catch(()=>{}); }
+function syncOfficersToFirebase(){
+  if(!fbDB) return;
+  fbDB.collection('_config').doc('officers').set({list:officers,updatedAt:new Date().toISOString()}).catch(()=>{});
+}
+function deleteDocFromFirebase(id){
+  if(fbDB) fbDB.collection('docs').doc(id).delete().catch(()=>{});
+}
+
+// ============ PDF SYNC VIA FIREBASE STORAGE (Base64 chunked) ============
+// Firestore max doc size = 1MB. PDF base64 ~1.33x size, split into 750KB chunks
+const PDF_CHUNK_SIZE = 750000; // bytes per chunk in Firestore
+
+async function savePdfToFirebase(entityType, id, fileType, base64Data){
+  if(!fbDB || !base64Data) return;
+  try{
+    const total=base64Data.length;
+    const numChunks=Math.ceil(total/PDF_CHUNK_SIZE);
+    const batch=fbDB.batch();
+    // Save metadata doc
+    const metaRef=fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`);
+    batch.set(metaRef,{numChunks,total,updatedAt:new Date().toISOString()});
+    // Save each chunk
+    for(let i=0;i<numChunks;i++){
+      const chunk=base64Data.slice(i*PDF_CHUNK_SIZE,(i+1)*PDF_CHUNK_SIZE);
+      const chunkRef=fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`);
+      batch.set(chunkRef,{data:chunk,idx:i});
+    }
+    await batch.commit();
+    console.log(`📎 PDF synced to Firebase: ${entityType}_${id}_${fileType} (${numChunks} chunks)`);
+  }catch(e){ console.warn('PDF Firebase sync failed:', e); }
+}
+
+async function loadPdfFromFirebase(entityType, id, fileType){
+  if(!fbDB) return null;
+  try{
+    const metaRef=await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).get();
+    if(!metaRef.exists) return null;
+    const {numChunks}=metaRef.data();
+    const chunks=[];
+    for(let i=0;i<numChunks;i++){
+      const chunkDoc=await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`).get();
+      if(chunkDoc.exists) chunks.push(chunkDoc.data().data);
+    }
+    if(chunks.length!==numChunks) return null;
+    return chunks.join('');
+  }catch(e){ console.warn('PDF load from Firebase failed:', e); return null; }
+}
+
+async function deletePdfFromFirebase(entityType, id, fileType){
+  if(!fbDB) return;
+  try{
+    const metaRef=await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).get();
+    if(!metaRef.exists) return;
+    const {numChunks}=metaRef.data();
+    const batch=fbDB.batch();
+    batch.delete(fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`));
+    for(let i=0;i<numChunks;i++){
+      batch.delete(fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`));
+    }
+    await batch.commit();
+  }catch(e){ console.warn('PDF delete from Firebase failed:', e); }
+}
 
 // ============ INIT ============
-document.addEventListener('DOMContentLoaded', function() {
-  // Pre-open IndexedDB so it's ready
+document.addEventListener('DOMContentLoaded', async function() {
+  // Pre-open IndexedDB
   openIDB().catch(e=>console.warn('IDB init warning:', e));
   // Set default report dates
   var repTo = document.getElementById('repTo');
   var repFrom = document.getElementById('repFrom');
   if(repTo) repTo.value = today();
   if(repFrom) repFrom.value = new Date(new Date().getFullYear(),0,1).toISOString().split('T')[0];
+  // Try auto-connect from URL hash (for GitHub Pages / shared links)
+  await tryAutoConnectFromCloud();
 });
 </script>
 </body>
