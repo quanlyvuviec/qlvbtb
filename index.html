@@ -237,6 +237,21 @@
   .chart-bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 11px; font-weight: 700; color: #fff; transition: width .6s ease; }
   .chart-bar-val { width: 36px; text-align: right; font-weight: 700; color: var(--navy); flex-shrink: 0; }
 
+  /* ===== KẾT QUẢ TOOLTIP ===== */
+  .result-cell { position:relative; max-width:150px; }
+  .result-text {
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    cursor:pointer; display:block; font-size:12px; color:var(--text); padding:2px 0;
+  }
+  .result-text.short { cursor:default; }
+  .result-popup {
+    display:none; position:fixed; z-index:9000;
+    background:#1e293b; color:#e2e8f0; border-radius:8px; padding:10px 14px;
+    font-size:12px; line-height:1.6; max-width:300px; min-width:150px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4); white-space:pre-wrap; word-break:break-word;
+    pointer-events:none; border:1px solid rgba(255,255,255,0.1);
+  }
+
   /* ===== TOAST ===== */
   #toastContainer { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
   .toast { background:#1a2035; color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600;
@@ -600,7 +615,11 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Đơn vị báo cáo</label>
+            <label>Đơn vị cấp trên (dòng 1 header)</label>
+            <input class="form-control" id="repUnitParent" value="CÔNG AN PHƯỜNG TÂN BÌNH" placeholder="VD: CÔNG AN PHƯỜNG TÂN BÌNH">
+          </div>
+          <div class="form-group">
+            <label>Đơn vị báo cáo (dòng 2 header)</label>
             <select class="form-control" id="repUnit">
               <option value="Tổ Tổng hợp">Tổ Tổng hợp</option>
               <option value="Tổ Trật tự">Tổ Trật tự</option>
@@ -1075,14 +1094,37 @@ async function idbDel(key){
 // ============ UTILS ============
 function genId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
 function today(){ return new Date().toISOString().split('T')[0]; }
+// Luôn trả về dd/mm/yyyy — không phụ thuộc locale trình duyệt
 function fmtDate(d){
   if(!d) return '';
-  try{ const dt=new Date(d+'T00:00:00'); return dt.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'}); }
-  catch(e){ return d; }
+  try{
+    const s = String(d).trim();
+    // Input ISO yyyy-mm-dd
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)){
+      const [y,m,day]=s.split('-');
+      return `${day}/${m}/${y}`;
+    }
+    // Input đã là dd/mm/yyyy
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+    // Fallback parse
+    const dt=new Date(s+'T00:00:00');
+    if(isNaN(dt)) return s;
+    const dd=String(dt.getDate()).padStart(2,'0');
+    const mm=String(dt.getMonth()+1).padStart(2,'0');
+    return `${dd}/${mm}/${dt.getFullYear()}`;
+  }catch(e){ return d; }
 }
 function fmtDatetime(d){
   if(!d) return '';
-  try{ return new Date(d).toLocaleString('vi-VN'); }catch(e){return d;}
+  try{
+    const dt=new Date(d);
+    if(isNaN(dt)) return d;
+    const dd=String(dt.getDate()).padStart(2,'0');
+    const mm=String(dt.getMonth()+1).padStart(2,'0');
+    const HH=String(dt.getHours()).padStart(2,'0');
+    const MM=String(dt.getMinutes()).padStart(2,'0');
+    return `${dd}/${mm}/${dt.getFullYear()} ${HH}:${MM}`;
+  }catch(e){return d;}
 }
 
 // ============ STORAGE WRAPPER (safe for file:// & privacy mode) ============
@@ -1124,11 +1166,16 @@ function loadLocal(){
 // Lưu file vào IDB (local) + Firebase (cloud)
 async function saveFileToIDB(entityType, id, fileType, base64Data){
   if(!base64Data) return;
-  // Luôn lưu local IDB trước
+  // Luôn lưu IDB local trước (nhanh, offline)
   await idbSet(`${entityType}_${id}_${fileType}`, base64Data);
-  // Đồng bộ lên Firebase nếu đã kết nối
+  // Đồng bộ lên Firebase nếu đã kết nối (background, không chặn UI)
   if(firebaseConnected && fbDB){
-    savePdfToFirebase(entityType, id, fileType, base64Data).catch(e=>console.warn('PDF Firebase sync error:',e));
+    const sizeMB=(base64Data.length/1024/1024).toFixed(1);
+    showToast(`☁️ Đang đồng bộ PDF lên cloud (${sizeMB}MB)…`,'info',8000);
+    savePdfToFirebase(entityType, id, fileType, base64Data).then(ok=>{
+      if(ok) showToast('✅ PDF đã lưu lên cloud!');
+      else showToast('⚠️ PDF lưu local OK nhưng cloud chưa đồng bộ.','error',4000);
+    });
   }
 }
 // Lấy file từ IDB, fallback sang Firebase nếu không có local
@@ -1286,8 +1333,9 @@ function getWarnings(){
 // ============ DASHBOARD ============
 function renderDashboard(){
   const now=new Date();
+  const wd=['Chủ nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'][now.getDay()];
   document.getElementById('dashDate').textContent=
-    'Hôm nay: '+now.toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    `Hôm nay: ${wd}, ngày ${now.getDate().toString().padStart(2,'0')} tháng ${(now.getMonth()+1).toString().padStart(2,'0')} năm ${now.getFullYear()}`;
 
   const done=docs.filter(d=>d.progress==='Hoàn thành').length;
   const pct=docs.length?Math.round(done/docs.length*100):0;
@@ -1364,6 +1412,37 @@ function renderWarnings(){
   }).join('');
 }
 
+// ============ RESULT CELL — hiển thị kết quả dài với tooltip ============
+let _tooltipEl=null;
+function mkResultCell(text){
+  const t=text||'';
+  const short=t.length<=28;
+  const preview=short?t:(t.slice(0,26)+'…');
+  const xe=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if(short) return `<td style="font-size:12px;color:var(--text)">${xe(t)}</td>`;
+  return `<td class="result-cell">
+    <span class="result-text" onmouseenter="showResultTip(event,'${xe(t).replace(/'/g,'&#39;')}')" onmouseleave="hideResultTip()">${xe(preview)}</span>
+  </td>`;
+}
+function showResultTip(e,text){
+  hideResultTip();
+  const tip=document.createElement('div');
+  tip.className='result-popup';
+  tip.textContent=text;
+  document.body.appendChild(tip);
+  _tooltipEl=tip;
+  const rect=e.target.getBoundingClientRect();
+  const tw=Math.min(300,window.innerWidth-20);
+  let left=rect.left; let top=rect.top-tip.offsetHeight-8;
+  if(left+tw>window.innerWidth-8) left=window.innerWidth-tw-8;
+  if(top<8){ top=rect.bottom+8; } // flip below if no space above
+  tip.style.left=left+'px'; tip.style.top=top+'px';
+  tip.style.width=tw+'px'; tip.style.display='block';
+}
+function hideResultTip(){
+  if(_tooltipEl){ _tooltipEl.remove(); _tooltipEl=null; }
+}
+
 // ============ DOCS ============
 function renderDocs(){
   const q=(document.getElementById('searchDocs')?.value||'').toLowerCase();
@@ -1397,7 +1476,7 @@ function renderDocs(){
       <td class="td-truncate">${d.summary||''}</td>
       <td style="white-space:nowrap;font-size:12px">${isWarn?'<span style="color:var(--red-warn);font-weight:700">⚠️ ':''} ${fmtDate(d.deadline)}${isWarn?'</span>':''}</td>
       <td><span class="badge badge-${progColor}">${d.progress||'Chưa xử lý'}</span></td>
-      <td class="td-truncate" style="font-size:12px;max-width:120px">${d.result||''}</td>
+      <td>${mkResultCell(d.result)}</td>
       <td style="font-size:12px;white-space:nowrap">${d.officer||''}</td>
       <td style="white-space:nowrap">
         ${d.fileContentName?`<button class="btn btn-sm btn-outline btn-icon" title="${d.fileContentName}" onclick="viewPdfById('${d.id}','content')">📄</button>`:''}
@@ -1505,8 +1584,8 @@ function setFileDisplay(rowId, nameId, name){
 function handleFileSelect(input, nameRowId, dataKey){
   const file=input.files[0];
   if(!file) return;
-  if(file.type!=='application/pdf'){ alert('Vui lòng chọn file PDF!'); input.value=''; return; }
-  if(file.size>10*1024*1024){ alert('File quá lớn! Tối đa 10MB.'); input.value=''; return; }
+  if(file.type!=='application/pdf'){ showToast('❌ Vui lòng chọn file PDF!','error'); input.value=''; return; }
+  if(file.size>10*1024*1024){ showToast('❌ File quá lớn! Tối đa 10MB.','error'); input.value=''; return; }
   // Show loading indicator
   const nameTextEl = document.getElementById(nameRowId.replace('Name','NameText'));
   if(nameTextEl) nameTextEl.textContent = '⏳ Đang đọc file...';
@@ -1520,7 +1599,7 @@ function handleFileSelect(input, nameRowId, dataKey){
     if(nameTextEl) nameTextEl.textContent = file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
     if(rowEl) rowEl.style.display='flex';
   };
-  reader.onerror = ()=>{ alert('Lỗi đọc file!'); };
+  reader.onerror = ()=>{ showToast('❌ Lỗi đọc file PDF!','error'); };
   reader.readAsDataURL(file);
 }
 
@@ -1533,69 +1612,107 @@ function clearFile(inputId, rowId, dataKey){
   setFileDisplay(rowId, rowId.replace('Name','NameText'), null);
 }
 
-async function viewPdf(dataKey, nameId){
-  const data=modalFiles[dataKey];
-  const nameEl=document.getElementById(nameId);
-  const name=nameEl?.textContent||'file.pdf';
-  if(data){
-    openPdfViewer(data, name);
-    return;
-  }
-  // Chưa chọn file mới — thử load từ IDB nếu đang chỉnh sửa
-  if(editingDocId){
-    const fileType = dataKey.includes('Result')||dataKey.includes('result') ? 'result':'content';
-    const idbData = await getFileFromIDB('doc', editingDocId, fileType);
-    if(idbData){ openPdfViewer(idbData, name); return; }
-  }
-  if(editingPetId){
-    const fileType = dataKey.includes('Result')||dataKey.includes('result') ? 'result':'content';
-    const idbData = await getFileFromIDB('pet', editingPetId, fileType);
-    if(idbData){ openPdfViewer(idbData, name); return; }
-  }
-  alert('Chưa có file! Hãy chọn file PDF.');
-}
 
 async function viewPdfById(id, type){
   const rec=[...docs,...pets].find(x=>x.id===id);
   if(!rec) return;
-  const entityType = docs.find(x=>x.id===id)?'doc':'pet';
-  const name = type==='content'?rec.fileContentName:rec.fileResultName;
-  // Thử lấy từ IDB trước
-  let data = await getFileFromIDB(entityType, id, type);
-  if(!data){
-    alert('File PDF chưa được lưu hoặc đã bị xóa khỏi thiết bị này. Vui lòng đính kèm lại.');
-    return;
+  const entityType=docs.find(x=>x.id===id)?'doc':'pet';
+  const name=type==='content'?rec.fileContentName:rec.fileResultName;
+
+  // Show loading spinner in PDF modal immediately
+  const modal=document.getElementById('pdfModal');
+  const viewer=document.getElementById('pdfViewer');
+  document.getElementById('pdfModalTitle').textContent='⏳ Đang tải '+( name||'file.pdf')+'...';
+  viewer.src='';
+  modal.classList.add('open');
+
+  try{
+    // 1. Thử IDB local (tức thì)
+    let data=await idbGet(`${entityType}_${id}_${type}`);
+
+    // 2. Nếu không có local → thử Firebase
+    if(!data && firebaseConnected && fbDB){
+      document.getElementById('pdfModalTitle').textContent='☁️ Đang tải PDF từ cloud…';
+      data=await loadPdfFromFirebase(entityType, id, type);
+      if(data){
+        // Cache vào IDB local
+        await idbSet(`${entityType}_${id}_${type}`, data);
+        showToast('✅ Đã tải PDF từ cloud!');
+      }
+    }
+
+    if(!data){
+      modal.classList.remove('open');
+      showToast('❌ File PDF chưa có trên cloud. Vui lòng mở trên máy có file gốc để đồng bộ.','error');
+      return;
+    }
+
+    // Hiển thị PDF
+    document.getElementById('pdfModalTitle').textContent='📄 '+(name||'file.pdf');
+    openPdfViewerData(data, name||'file.pdf');
+  }catch(err){
+    modal.classList.remove('open');
+    showToast('❌ Lỗi tải PDF: '+err.message,'error');
   }
-  openPdfViewer(data, name||'file.pdf');
 }
 
 let currentPdfData=null, currentPdfName='file.pdf', currentPdfBlobUrl=null;
-function openPdfViewer(data, name){
+
+// Hàm chuyển base64 → BlobURL và hiển thị trong modal (không mở modal)
+function openPdfViewerData(data, name){
   currentPdfData=data; currentPdfName=name;
-  document.getElementById('pdfModalTitle').textContent='📄 '+name;
-  // Convert base64 to Blob URL to avoid browser security restrictions
-  try {
-    var byteStr = atob(data.split(',')[1]);
-    var ab = new ArrayBuffer(byteStr.length);
-    var ia = new Uint8Array(ab);
-    for(var i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
-    var blob = new Blob([ab], {type:'application/pdf'});
+  try{
+    const b64=data.includes(',') ? data.split(',')[1] : data;
+    const byteStr=atob(b64);
+    const ab=new ArrayBuffer(byteStr.length);
+    const ia=new Uint8Array(ab);
+    for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
+    const blob=new Blob([ab],{type:'application/pdf'});
     if(currentPdfBlobUrl) URL.revokeObjectURL(currentPdfBlobUrl);
-    currentPdfBlobUrl = URL.createObjectURL(blob);
-    document.getElementById('pdfViewer').src = currentPdfBlobUrl;
-  } catch(e) {
-    // Fallback: open in new tab
-    var a = document.createElement('a');
-    a.href = data; a.download = name; a.target = '_blank'; a.click();
-    return;
+    currentPdfBlobUrl=URL.createObjectURL(blob);
+    document.getElementById('pdfViewer').src=currentPdfBlobUrl;
+    document.getElementById('pdfModal').classList.add('open');
+  }catch(e){
+    // Fallback: tải về trực tiếp
+    const a=document.createElement('a');
+    a.href=data; a.download=name; a.target='_blank'; a.click();
   }
-  document.getElementById('pdfModal').classList.add('open');
 }
+
+// Hàm mở PDF từ modalFiles (khi đang trong form nhập liệu)
+function openPdfViewer(data, name){
+  document.getElementById('pdfModalTitle').textContent='📄 '+name;
+  openPdfViewerData(data, name);
+}
+
 function downloadCurrentPdf(){
   if(!currentPdfData) return;
-  var a=document.createElement('a');
+  const a=document.createElement('a');
   a.href=currentPdfBlobUrl||currentPdfData;
   a.download=currentPdfName; a.click();
+}
+
+// Hàm xem PDF trong modal (viewPdf từ form — khi chọn file mới)
+async function viewPdf(dataKey, nameId){
+  const data=modalFiles[dataKey];
+  const nameEl=document.getElementById(nameId);
+  const name=(nameEl?.textContent||'file.pdf').split('(')[0].trim();
+  if(data){
+    document.getElementById('pdfModalTitle').textContent='📄 '+name;
+    openPdfViewerData(data, name);
+    return;
+  }
+  // Chưa chọn file mới → thử IDB/Firebase nếu đang chỉnh sửa
+  const fileType=dataKey.includes('Result')||dataKey.includes('result')?'result':'content';
+  let idbData=null;
+  if(editingDocId) idbData=await getFileFromIDB('doc', editingDocId, fileType);
+  if(!idbData && editingPetId) idbData=await getFileFromIDB('pet', editingPetId, fileType);
+  if(idbData){
+    document.getElementById('pdfModalTitle').textContent='📄 '+name;
+    openPdfViewerData(idbData, name);
+    return;
+  }
+  showToast('❌ Chưa có file PDF. Hãy chọn file PDF trước.','error');
 }
 
 
@@ -1648,8 +1765,8 @@ function onRepCycleChange(){
 let milestoneDates=[];
 function addMilestoneDate(){
   const v=document.getElementById('milestoneAddDate').value;
-  if(!v){alert('Vui lòng chọn ngày!');return;}
-  if(milestoneDates.includes(v)){alert('Ngày này đã được chọn!');return;}
+  if(!v){showToast('❌ Vui lòng chọn ngày!','error');return;}
+  if(milestoneDates.includes(v)){showToast('⚠️ Ngày này đã được chọn!','info');return;}
   milestoneDates.push(v);
   milestoneDates.sort();
   document.getElementById('repMilestoneDates').value=JSON.stringify(milestoneDates);
@@ -1683,7 +1800,7 @@ async function saveDoc(){
   const number=document.getElementById('docNumber').value.trim();
   const sender=document.getElementById('docSender').value.trim();
   const summary=document.getElementById('docSummary').value.trim();
-  if(!number||!sender||!summary){ alert('Vui lòng điền đầy đủ các trường bắt buộc (*)!'); return; }
+  if(!number||!sender||!summary){ showToast('❌ Vui lòng điền đầy đủ các trường bắt buộc (*): Số văn bản, Đơn vị gửi, Trích yếu!','error',4000); return; }
 
   const id=editingDocId||genId();
   const existing=docs.find(d=>d.id===id)||{};
@@ -1861,7 +1978,7 @@ function renderPets(){
     <td style="white-space:nowrap;font-size:12px">${fmtDate(p.receivedDate)}</td>
     <td class="td-truncate">${p.summary||''}</td>
     <td><span class="badge badge-${progBadge[p.progress||'Chờ xử lý']||'gray'}">${p.progress||''}</span></td>
-    <td class="td-truncate" style="font-size:12px;max-width:120px">${p.result||''}</td>
+    <td>${mkResultCell(p.result)}</td>
     <td style="font-size:12px;white-space:nowrap">${p.officer||''}</td>
     <td style="white-space:nowrap">
       ${p.fileContentName?`<button class="btn btn-sm btn-outline btn-icon" title="${p.fileContentName}" onclick="viewPdfById('${p.id}','content')">📄</button>`:''}
@@ -1880,7 +1997,7 @@ function renderPets(){
 async function savePet(){
   const sender=document.getElementById('petSender').value.trim();
   const summary=document.getElementById('petSummary').value.trim();
-  if(!sender||!summary){ alert('Vui lòng điền đầy đủ trường bắt buộc!'); return; }
+  if(!sender||!summary){ showToast('❌ Vui lòng điền Người gửi và Trích yếu!','error',4000); return; }
   const id=editingPetId||genId();
   const existing=pets.find(p=>p.id===id)||{};
 
@@ -1966,7 +2083,9 @@ async function exportDocx(){
     showToast('❌ JSZip chưa tải. Vui lòng kết nối mạng lần đầu.','error'); return;
   }
   const type=document.getElementById('repType').value;
-  const unit=document.getElementById('repUnit').value||'ĐƠN VỊ';
+  const unit=document.getElementById('repUnit').value||'TỔ TỔNG HỢP';
+  const unitParent=(document.getElementById('repUnitParent')?.value||'CÔNG AN PHƯỜNG').toUpperCase();
+  const unitSub=unit.toUpperCase();
   const from=document.getElementById('repFrom').value;
   const to=document.getElementById('repTo').value;
   const signer=document.getElementById('repSigner').value||'...........................';
@@ -2029,66 +2148,102 @@ ${indent?`<w:ind w:left="${indent}"/>`:''}
 ${cols.map(([t,opts])=>mkTc(t,{...opts,bg:isHeader?'1A3A5C':isAlt?'EBF5FB':'FFFFFF'})).join('')}
 </w:tr>`;
 
-  // Mẫu header theo chuẩn VN (2 cột: đơn vị cấp trên + quốc hiệu)
+  // ===== HEADER CHUẨN VN: 2 cột không viền =====
+  // Trái: Tên đơn vị cấp trên + tên đơn vị báo cáo + gạch ngang
+  // Phải: Quốc hiệu + Độc lập + gạch ngang
   const mkHeaderVN=()=>`
-<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders>
-  <w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/>
-  <w:right w:val="none"/><w:insideH w:val="none"/><w:insideV w:val="none"/>
-</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr>
+<w:tbl><w:tblPr>
+  <w:tblW w:w="15120" w:type="dxa"/>
+  <w:tblLayout w:type="fixed"/>
+  <w:tblBorders>
+    <w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/>
+    <w:right w:val="none"/><w:insideH w:val="none"/><w:insideV w:val="none"/>
+  </w:tblBorders>
+</w:tblPr>
 <w:tr><w:trPr><w:trHeight w:val="0" w:hRule="auto"/></w:trPr>
-<w:tc><w:tcPr><w:tcW w:w="7560" w:type="dxa"/><w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders></w:tcPr>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr>
-<w:r>${rPr(22,true)}<w:t>CÔNG AN QUẬN/HUYỆN (CẤP TRÊN)</w:t></w:r></w:p>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr>
-<w:r>${rPr(22,true)}<w:t>${xe(unit.toUpperCase())}</w:t></w:r></w:p>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="80"/></w:pPr>
-<w:r>${rPr(22)}<w:t>──────────</w:t></w:r></w:p>
+<w:tc><w:tcPr><w:tcW w:w="7560" w:type="dxa"/>
+  <w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders>
+</w:tcPr>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="0" w:before="0"/></w:pPr>
+<w:r>${rPr(22,true)}<w:t>${xe(unitParent)}</w:t></w:r></w:p>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="0" w:before="0"/></w:pPr>
+<w:r>${rPr(22,true)}<w:t>${xe(unitSub)}</w:t></w:r></w:p>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="60" w:before="0"/></w:pPr>
+<w:r>${rPr(20)}<w:t>──────────</w:t></w:r></w:p>
 </w:tc>
-<w:tc><w:tcPr><w:tcW w:w="7560" w:type="dxa"/><w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders></w:tcPr>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr>
+<w:tc><w:tcPr><w:tcW w:w="7560" w:type="dxa"/>
+  <w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders>
+</w:tcPr>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="0" w:before="0"/></w:pPr>
 <w:r>${rPr(24,true)}<w:t>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</w:t></w:r></w:p>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="0" w:before="0"/></w:pPr>
 <w:r>${rPr(22)}<w:t>Độc lập - Tự do - Hạnh phúc</w:t></w:r></w:p>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="80"/></w:pPr>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="60" w:before="0"/></w:pPr>
 <w:r>${rPr(20)}<w:t>────────────────────────</w:t></w:r></w:p>
 </w:tc></w:tr></w:tbl>`;
 
-  // Số và ký hiệu văn bản
-  const mkSoVanBan=(so='')=>`<w:p><w:pPr><w:jc w:val="left"/><w:spacing w:after="40"/></w:pPr>
-<w:r>${rPr(22)}<w:t xml:space="preserve">Số: ${xe(so||'     /BC-CAP')}</w:t></w:r></w:p>`;
+  // Số văn bản (trái) + Địa danh ngày tháng (phải) — cùng 1 hàng
+  const mkSoVanBan=()=>`
+<w:tbl><w:tblPr>
+  <w:tblW w:w="15120" w:type="dxa"/>
+  <w:tblLayout w:type="fixed"/>
+  <w:tblBorders>
+    <w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/>
+    <w:right w:val="none"/><w:insideH w:val="none"/><w:insideV w:val="none"/>
+  </w:tblBorders>
+</w:tblPr>
+<w:tr><w:trPr><w:trHeight w:val="0" w:hRule="auto"/></w:trPr>
+<w:tc><w:tcPr><w:tcW w:w="7560" w:type="dxa"/>
+  <w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders>
+</w:tcPr>
+<w:p><w:pPr><w:jc w:val="left"/><w:spacing w:after="60" w:before="0"/></w:pPr>
+<w:r>${rPr(22)}<w:t xml:space="preserve">Số:          /BC-CAP</w:t></w:r></w:p>
+</w:tc>
+<w:tc><w:tcPr><w:tcW w:w="7560" w:type="dxa"/>
+  <w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders>
+</w:tcPr>
+<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:after="60" w:before="0"/></w:pPr>
+<w:r><w:rPr><w:i/><w:sz w:val="22"/><w:szCs w:val="22"/>
+<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="Times New Roman" w:cs="Times New Roman"/></w:rPr>
+<w:t xml:space="preserve">${xe(location)}, ${xe(dateStr)}</w:t></w:r></w:p>
+</w:tc></w:tr></w:tbl>`;
 
   const mkTitle=(t,period)=>`
-${mkEmpty()}
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="100" w:after="60"/></w:pPr>
-<w:r>${rPr(28,true)}<w:t>${xe(t)}</w:t></w:r></w:p>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="120"/></w:pPr>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="60" w:after="40"/></w:pPr>
+<w:r>${rPr(26,true)}<w:t>${xe(t)}</w:t></w:r></w:p>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="100"/></w:pPr>
 <w:r>${rPr(22)}<w:t xml:space="preserve">(${xe(period)})</w:t></w:r></w:p>`;
 
   const mkSum=(label,val)=>mkP(`• ${label}: ${val}`,{sz:24,indent:360,spAfter:60});
 
-  // Khối chữ ký 2 cột: ngày + chức vụ
+  // Chữ ký: Nơi nhận (trái) + Chức vụ + Tên (phải)
   const mkSign=()=>`
 ${mkEmpty()}
-<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders>
-<w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/>
-<w:right w:val="none"/><w:insideH w:val="none"/><w:insideV w:val="none"/>
-</w:tblBorders></w:tblPr>
+<w:tbl><w:tblPr>
+  <w:tblW w:w="15120" w:type="dxa"/>
+  <w:tblLayout w:type="fixed"/>
+  <w:tblBorders>
+    <w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/>
+    <w:right w:val="none"/><w:insideH w:val="none"/><w:insideV w:val="none"/>
+  </w:tblBorders>
+</w:tblPr>
 <w:tr><w:trPr><w:trHeight w:val="0" w:hRule="auto"/></w:trPr>
-<w:tc><w:tcPr><w:tcW w:w="7560" w:type="dxa"/><w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders></w:tcPr>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="60"/></w:pPr>
-<w:r>${rPr(22)}<w:t xml:space="preserve">Nơi nhận:</w:t></w:r></w:p>
-<w:p><w:pPr><w:jc w:val="left"/><w:spacing w:after="40"/></w:pPr>
+<w:tc><w:tcPr><w:tcW w:w="7560" w:type="dxa"/>
+  <w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders>
+</w:tcPr>
+<w:p><w:pPr><w:jc w:val="left"/><w:spacing w:after="40" w:before="0"/></w:pPr>
+<w:r>${rPr(22)}<w:t>Nơi nhận:</w:t></w:r></w:p>
+<w:p><w:pPr><w:jc w:val="left"/><w:ind w:left="360"/><w:spacing w:after="40" w:before="0"/></w:pPr>
 <w:r>${rPr(20)}<w:t>- Lưu: VT.</w:t></w:r></w:p>
 </w:tc>
-<w:tc><w:tcPr><w:tcW w:w="7560" w:type="dxa"/><w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders></w:tcPr>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr>
-<w:r>${rPr(22,true)}<w:t xml:space="preserve">${xe(location)}, ${xe(dateStr)}</w:t></w:r></w:p>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr>
+<w:tc><w:tcPr><w:tcW w:w="7560" w:type="dxa"/>
+  <w:tcBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders>
+</w:tcPr>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40" w:before="0"/></w:pPr>
 <w:r>${rPr(22,true)}<w:t>${xe(signerRole)}</w:t></w:r></w:p>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr></w:p>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr></w:p>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr></w:p>
-<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="280" w:before="0"/></w:pPr>
+<w:r>${rPr(22)}<w:t xml:space="preserve">(Ký, ghi rõ họ tên)</w:t></w:r></w:p>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40" w:before="0"/></w:pPr>
 <w:r>${rPr(22,true)}<w:t>${xe(signer)}</w:t></w:r></w:p>
 </w:tc></w:tr></w:tbl>`;
 
@@ -2610,8 +2765,8 @@ function doRestore(e){
       const d=JSON.parse(ev.target.result);
       if(d.docs) docs=d.docs; if(d.pets) pets=d.pets; if(d.officers) officers=d.officers;
       saveLocal(); renderAll(); updateWarnBadge();
-      alert('✅ Khôi phục dữ liệu thành công! Đã tải '+docs.length+' văn bản, '+pets.length+' đơn thư.');
-    }catch(err){ alert('❌ File không hợp lệ!'); }
+      showToast('✅ Khôi phục thành công! '+docs.length+' văn bản, '+pets.length+' đơn thư.');
+    }catch(err){ showToast('❌ File không hợp lệ!','error'); }
   }; r.readAsText(f);
 }
 
@@ -2793,59 +2948,69 @@ function deleteDocFromFirebase(id){
   if(fbDB) fbDB.collection('docs').doc(id).delete().catch(()=>{});
 }
 
-// ============ PDF SYNC VIA FIREBASE STORAGE (Base64 chunked) ============
-// Firestore max doc size = 1MB. PDF base64 ~1.33x size, split into 750KB chunks
-const PDF_CHUNK_SIZE = 750000; // bytes per chunk in Firestore
+// ============ PDF SYNC VIA FIRESTORE (Base64 chunked) ============
+// Firestore max doc = 1MB. PDF base64 ~1.33x, split into 600KB chunks để an toàn
+const PDF_CHUNK_SIZE = 600000;
 
 async function savePdfToFirebase(entityType, id, fileType, base64Data){
-  if(!fbDB || !base64Data) return;
+  if(!fbDB || !base64Data) return false;
   try{
     const total=base64Data.length;
     const numChunks=Math.ceil(total/PDF_CHUNK_SIZE);
-    const batch=fbDB.batch();
-    // Save metadata doc
-    const metaRef=fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`);
-    batch.set(metaRef,{numChunks,total,updatedAt:new Date().toISOString()});
-    // Save each chunk
+    // Lưu từng chunk tuần tự (tránh lỗi batch limit)
     for(let i=0;i<numChunks;i++){
       const chunk=base64Data.slice(i*PDF_CHUNK_SIZE,(i+1)*PDF_CHUNK_SIZE);
-      const chunkRef=fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`);
-      batch.set(chunkRef,{data:chunk,idx:i});
+      await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`).set({data:chunk,idx:i});
     }
-    await batch.commit();
-    console.log(`📎 PDF synced to Firebase: ${entityType}_${id}_${fileType} (${numChunks} chunks)`);
-  }catch(e){ console.warn('PDF Firebase sync failed:', e); }
+    // Lưu metadata sau cùng (khi tất cả chunks đã xong)
+    await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).set({
+      numChunks, total, updatedAt:new Date().toISOString(), ok:true
+    });
+    console.log(`📎 PDF→Firebase OK: ${entityType}_${id}_${fileType} (${numChunks} chunks, ${(total/1024).toFixed(0)}KB)`);
+    return true;
+  }catch(e){
+    console.warn('PDF Firebase sync failed:', e.message||e);
+    return false;
+  }
 }
 
 async function loadPdfFromFirebase(entityType, id, fileType){
   if(!fbDB) return null;
   try{
-    const metaRef=await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).get();
-    if(!metaRef.exists) return null;
-    const {numChunks}=metaRef.data();
-    const chunks=[];
+    const metaSnap=await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).get();
+    if(!metaSnap.exists || !metaSnap.data()?.ok) return null;
+    const {numChunks}=metaSnap.data();
+    const chunks=new Array(numChunks);
+    // Tải tất cả chunks song song để nhanh hơn
+    const promises=[];
     for(let i=0;i<numChunks;i++){
-      const chunkDoc=await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`).get();
-      if(chunkDoc.exists) chunks.push(chunkDoc.data().data);
+      promises.push(
+        fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`).get()
+          .then(snap=>{ if(snap.exists) chunks[i]=snap.data().data; })
+      );
     }
-    if(chunks.length!==numChunks) return null;
+    await Promise.all(promises);
+    // Kiểm tra tất cả chunks đều có
+    if(chunks.some(c=>!c)){
+      console.warn('PDF load: missing chunks');
+      return null;
+    }
     return chunks.join('');
-  }catch(e){ console.warn('PDF load from Firebase failed:', e); return null; }
+  }catch(e){ console.warn('PDF load from Firebase failed:', e.message||e); return null; }
 }
 
 async function deletePdfFromFirebase(entityType, id, fileType){
   if(!fbDB) return;
   try{
-    const metaRef=await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).get();
-    if(!metaRef.exists) return;
-    const {numChunks}=metaRef.data();
-    const batch=fbDB.batch();
-    batch.delete(fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`));
+    const metaSnap=await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).get();
+    if(!metaSnap.exists) return;
+    const {numChunks}=metaSnap.data();
+    const dels=[fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).delete()];
     for(let i=0;i<numChunks;i++){
-      batch.delete(fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`));
+      dels.push(fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`).delete());
     }
-    await batch.commit();
-  }catch(e){ console.warn('PDF delete from Firebase failed:', e); }
+    await Promise.all(dels);
+  }catch(e){ console.warn('PDF delete from Firebase failed:', e.message||e); }
 }
 
 // ============ INIT ============
