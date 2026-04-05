@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <!-- JSZip: tạo file DOCX chuẩn (tải 1 lần, hoạt động offline) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <!-- SheetJS: xuất Excel -->
@@ -685,38 +686,59 @@
         <h3>🔥 Firebase — Đồng bộ đám mây
           <span class="firebase-status disconnected" id="fbStatus">● Chưa kết nối</span>
         </h3>
-        <div class="alert-box alert-info" style="margin-bottom:14px">
-          Nhập thông tin Firebase project để đồng bộ dữ liệu realtime (văn bản, đơn thư, file PDF) lên cloud — mọi thiết bị kết nối sẽ thấy dữ liệu giống nhau.
+        <div class="alert-box alert-info" style="margin-bottom:12px">
+          Kết nối Firebase để đồng bộ văn bản, đơn thư và <b>file PDF</b> lên cloud — mọi thiết bị đều thấy dữ liệu giống nhau theo thời gian thực. <b>Storage Bucket</b> là bắt buộc để đồng bộ PDF.
         </div>
+
+        <!-- Import từ file txt -->
+        <div style="background:#f0fdf4;border:1.5px dashed #22c55e;border-radius:8px;padding:12px 14px;margin-bottom:14px">
+          <div style="font-weight:700;font-size:13px;color:#065f46;margin-bottom:6px">📄 Tự động điền từ file config — Không cần nhập tay</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">
+            Tạo file <code style="background:#dcfce7;padding:1px 6px;border-radius:3px;font-size:11px">firebase-config.txt</code> chứa thông tin từ Firebase Console rồi chọn bên dưới:
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <label class="btn btn-outline btn-sm" style="cursor:pointer;background:#fff">
+              📂 Chọn file config (.txt / .json)
+              <input type="file" id="configFileInput" accept=".txt,.json" style="display:none" onchange="loadFirebaseConfigFromFile(event)">
+            </label>
+            <button class="btn btn-sm" style="background:#dbeafe;color:#1e40af;border:none;cursor:pointer" onclick="downloadSampleConfig()">
+              ⬇️ Tải file mẫu
+            </button>
+          </div>
+          <div id="configFileMsg" style="font-size:12px;margin-top:6px;padding:4px 8px;border-radius:5px;display:none"></div>
+        </div>
+
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">Hoặc nhập thủ công:</div>
         <div class="input-row" style="margin-bottom:10px">
           <div class="form-group"><label>API Key</label><input class="form-control" id="fb_apiKey" placeholder="AIzaSy..."></div>
           <div class="form-group"><label>Auth Domain</label><input class="form-control" id="fb_authDomain" placeholder="project.firebaseapp.com"></div>
           <div class="form-group"><label>Project ID</label><input class="form-control" id="fb_projectId" placeholder="my-project"></div>
-          <div class="form-group"><label>Storage Bucket</label><input class="form-control" id="fb_storageBucket" placeholder="my-project.appspot.com"></div>
+          <div class="form-group">
+            <label>Storage Bucket <span style="color:var(--red-warn);font-size:10px">★ bắt buộc cho PDF</span></label>
+            <input class="form-control" id="fb_storageBucket" placeholder="my-project.appspot.com">
+          </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="connectFirebase()">🔗 Kết nối Firebase</button>
           <button class="btn btn-outline" onclick="disconnectFirebase()">Ngắt kết nối</button>
-          <button class="btn btn-success" onclick="syncToFirebase()" id="btnSync" style="display:none">☁️ Đồng bộ ngay</button>
+          <button class="btn btn-success" onclick="syncToFirebase()" id="btnSync" style="display:none">☁️ Đồng bộ metadata</button>
         </div>
-        <!-- Link chia sẻ tự động kết nối (hiện ra sau khi kết nối) -->
+
+        <!-- Link chia sẻ -->
         <div id="fbShareLinkWrap" style="display:none;margin-top:14px">
           <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px">
-            🔗 Link chia sẻ — Mở link này trên thiết bị khác để tự động kết nối Firebase:
+            🔗 Link chia sẻ — Mở trên thiết bị khác để tự kết nối:
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <input class="form-control" id="fbShareLink" readonly style="font-size:11px;background:#f8fafc;font-family:monospace">
             <button class="btn btn-outline btn-sm" onclick="copyShareLink()" style="flex-shrink:0">📋 Sao chép</button>
           </div>
-          <div style="font-size:11px;color:var(--text3);margin-top:5px">
-            💡 Dán link vào GitHub Pages URL. Thiết bị mới mở link sẽ tự kết nối Firebase mà không cần nhập lại API Key.
-          </div>
         </div>
         <div class="code-block" style="margin-top:14px;font-size:11px">
 ✅ Đồng bộ realtime: văn bản, đơn thư, cán bộ<br>
-✅ File PDF tự động tải từ cloud khi thiết bị khác xem<br>
+✅ PDF → Firebase Storage (hỗ trợ file lớn, không giới hạn)<br>
 ✅ Thiết bị mới: dùng link chia sẻ để tự kết nối<br>
-📌 Backup thủ công: Cài đặt → Sao lưu → Backup JSON
+📌 Cần bật Firebase Storage: Console → Storage → Get started
         </div>
       </div>
 
@@ -1163,47 +1185,6 @@ function loadLocal(){
   }catch(e){ console.warn('Tải dữ liệu thất bại:', e); }
 }
 
-// Lưu file vào IDB (local) + Firebase (cloud)
-async function saveFileToIDB(entityType, id, fileType, base64Data){
-  if(!base64Data) return;
-  // Luôn lưu IDB local trước (nhanh, offline)
-  await idbSet(`${entityType}_${id}_${fileType}`, base64Data);
-  // Đồng bộ lên Firebase nếu đã kết nối (background, không chặn UI)
-  if(firebaseConnected && fbDB){
-    const sizeMB=(base64Data.length/1024/1024).toFixed(1);
-    showToast(`☁️ Đang đồng bộ PDF lên cloud (${sizeMB}MB)…`,'info',8000);
-    savePdfToFirebase(entityType, id, fileType, base64Data).then(ok=>{
-      if(ok) showToast('✅ PDF đã lưu lên cloud!');
-      else showToast('⚠️ PDF lưu local OK nhưng cloud chưa đồng bộ.','error',4000);
-    });
-  }
-}
-// Lấy file từ IDB, fallback sang Firebase nếu không có local
-async function getFileFromIDB(entityType, id, fileType){
-  // Thử IDB local trước (nhanh nhất)
-  let data=await idbGet(`${entityType}_${id}_${fileType}`);
-  if(data) return data;
-  // Fallback: tải từ Firebase
-  if(firebaseConnected && fbDB){
-    showToast('⏳ Đang tải file PDF từ cloud...','info');
-    data=await loadPdfFromFirebase(entityType, id, fileType);
-    if(data){
-      // Cache vào IDB local để lần sau nhanh hơn
-      await idbSet(`${entityType}_${id}_${fileType}`, data);
-      showToast('✅ Đã tải PDF từ cloud!');
-    }
-  }
-  return data;
-}
-// Xóa file khỏi IDB + Firebase
-async function deleteFilesFromIDB(entityType, id){
-  await idbDel(`${entityType}_${id}_content`);
-  await idbDel(`${entityType}_${id}_result`);
-  if(firebaseConnected && fbDB){
-    deletePdfFromFirebase(entityType, id, 'content').catch(()=>{});
-    deletePdfFromFirebase(entityType, id, 'result').catch(()=>{});
-  }
-}
 
 // ============ LOGIN ============
 const USERS = { admin:'123456', canbo:'123456' };
@@ -1619,35 +1600,30 @@ async function viewPdfById(id, type){
   const entityType=docs.find(x=>x.id===id)?'doc':'pet';
   const name=type==='content'?rec.fileContentName:rec.fileResultName;
 
-  // Show loading spinner in PDF modal immediately
+  // Mở modal với trạng thái loading ngay
   const modal=document.getElementById('pdfModal');
-  const viewer=document.getElementById('pdfViewer');
-  document.getElementById('pdfModalTitle').textContent='⏳ Đang tải '+( name||'file.pdf')+'...';
-  viewer.src='';
+  document.getElementById('pdfModalTitle').textContent='⏳ Đang tải '+(name||'file.pdf')+'...';
+  document.getElementById('pdfViewer').src='';
   modal.classList.add('open');
 
   try{
-    // 1. Thử IDB local (tức thì)
+    // 1. Thử IDB local (tức thì, không cần mạng)
     let data=await idbGet(`${entityType}_${id}_${type}`);
 
-    // 2. Nếu không có local → thử Firebase
-    if(!data && firebaseConnected && fbDB){
+    // 2. Fallback: tải từ cloud (Storage → Firestore chunks)
+    if(!data && firebaseConnected){
       document.getElementById('pdfModalTitle').textContent='☁️ Đang tải PDF từ cloud…';
-      data=await loadPdfFromFirebase(entityType, id, type);
+      data=await loadPdfFromCloud(entityType, id, type);
       if(data){
-        // Cache vào IDB local
-        await idbSet(`${entityType}_${id}_${type}`, data);
-        showToast('✅ Đã tải PDF từ cloud!');
+        await idbSet(`${entityType}_${id}_${type}`, data); // cache local
       }
     }
 
     if(!data){
       modal.classList.remove('open');
-      showToast('❌ File PDF chưa có trên cloud. Vui lòng mở trên máy có file gốc để đồng bộ.','error');
+      showToast('❌ File PDF chưa được đồng bộ lên cloud. Mở trên máy gốc → xem file để tự động tải lên.','error',6000);
       return;
     }
-
-    // Hiển thị PDF
     document.getElementById('pdfModalTitle').textContent='📄 '+(name||'file.pdf');
     openPdfViewerData(data, name||'file.pdf');
   }catch(err){
@@ -2771,98 +2747,148 @@ function doRestore(e){
 }
 
 // ============ FIREBASE ============
-let fbApp=null, fbDB=null, fbStorage=null;
-
-// Lưu Firebase config vào cả localStorage VÀ Firestore để đồng bộ đa thiết bị
+let fbApp=null, fbDB=null, fbSt=null;
 const FB_CONFIG_KEY='fb_config';
+
+// ===== Import config từ file .txt / .json =====
+function loadFirebaseConfigFromFile(event){
+  const file=event.target.files[0]; if(!file) return;
+  const msg=document.getElementById('configFileMsg');
+  const show=(text,ok)=>{
+    msg.style.display='block';
+    msg.style.background=ok?'#dcfce7':'#fee2e2';
+    msg.style.color=ok?'#065f46':'#991b1b';
+    msg.textContent=text;
+  };
+  show('⏳ Đang đọc file...', true);
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const text=e.target.result.trim();
+      // Thử parse JSON thuần
+      let cfg=null;
+      try{ cfg=JSON.parse(text); }catch(_){}
+      // Nếu không phải JSON → dùng regex extract (hỗ trợ JS object literal từ Firebase Console)
+      if(!cfg||!cfg.apiKey){
+        cfg={};
+        const rx={
+          apiKey:/apiKey\s*[:=]\s*["'`]([^"'`\n]+)["'`]/,
+          authDomain:/authDomain\s*[:=]\s*["'`]([^"'`\n]+)["'`]/,
+          projectId:/projectId\s*[:=]\s*["'`]([^"'`\n]+)["'`]/,
+          storageBucket:/storageBucket\s*[:=]\s*["'`]([^"'`\n]+)["'`]/,
+          messagingSenderId:/messagingSenderId\s*[:=]\s*["'`]([^"'`\n]+)["'`]/,
+          appId:/appId\s*[:=]\s*["'`]([^"'`\n]+)["'`]/,
+        };
+        for(const[k,r] of Object.entries(rx)){ const m=text.match(r); if(m) cfg[k]=m[1]; }
+      }
+      if(!cfg.apiKey||!cfg.projectId){ show('❌ Không tìm thấy apiKey/projectId. Kiểm tra định dạng file.', false); return; }
+      // Điền vào form
+      ['apiKey','authDomain','projectId','storageBucket'].forEach(k=>{
+        const el=document.getElementById('fb_'+k);
+        if(el&&cfg[k]) el.value=cfg[k];
+      });
+      event.target.value=''; // reset file input
+      show('✅ Đã điền thông tin! Nhấn "Kết nối Firebase" để kết nối.', true);
+    }catch(err){ show('❌ Lỗi đọc file: '+err.message, false); }
+  };
+  reader.onerror=()=>show('❌ Không đọc được file.', false);
+  reader.readAsText(file);
+}
+
+function downloadSampleConfig(){
+  const sample=`{
+  "apiKey": "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXX",
+  "authDomain": "ten-project.firebaseapp.com",
+  "projectId": "ten-project",
+  "storageBucket": "ten-project.appspot.com",
+  "messagingSenderId": "123456789012",
+  "appId": "1:123456789012:web:abcdef123456"
+}
+
+// Lấy thông tin trên tại:
+// Firebase Console (console.firebase.google.com)
+// → Chọn Project → Project Settings (biểu tượng ⚙️)
+// → Tab "Your apps" → Chọn Web App (</>)
+// → Mục "SDK setup and configuration" → chọn "Config"
+// → Copy toàn bộ nội dung object firebaseConfig
+// → Lưu thành file .txt và chọn ở trên`;
+  const a=document.createElement('a');
+  a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(sample);
+  a.download='firebase-config-mau.txt'; a.click();
+  showToast('✅ Đã tải file mẫu!');
+}
+
+// ===== Auto-connect qua URL hash (link chia sẻ) =====
+async function tryAutoConnectFromCloud(){
+  const hash=location.hash.slice(1);
+  const pid=new URLSearchParams(hash).get('pid');
+  if(pid&&!_storeGet(FB_CONFIG_KEY)){
+    try{
+      const res=await fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/_config/app`);
+      if(!res.ok) return;
+      const data=await res.json();
+      const cfgStr=data?.fields?.fbConfig?.stringValue;
+      if(cfgStr){
+        const cfg=JSON.parse(cfgStr);
+        _storeSet(FB_CONFIG_KEY,JSON.stringify(cfg));
+        initFirebase(cfg);
+        showToast('✅ Tự động kết nối Firebase từ link chia sẻ!');
+      }
+    }catch(e){ console.warn('Auto-connect failed:',e); }
+  }
+}
 
 function checkFirebaseConfig(){
   const cfg=JSON.parse(_storeGet(FB_CONFIG_KEY)||'{}');
-  const el_key=document.getElementById('fb_apiKey');
-  const el_hint=document.getElementById('fbSetupHint');
-  if(cfg.apiKey){
-    if(el_key) el_key.value=cfg.apiKey||'';
-    ['fb_authDomain','fb_projectId','fb_storageBucket'].forEach(id=>{
-      const k=id.replace('fb_',''); const el=document.getElementById(id);
-      if(el) el.value=cfg[k]||cfg[id.replace('fb_','').replace(/([A-Z])/g,'_$1').toLowerCase()]||'';
-    });
-    if(document.getElementById('fb_authDomain')) document.getElementById('fb_authDomain').value=cfg.authDomain||'';
-    if(document.getElementById('fb_projectId')) document.getElementById('fb_projectId').value=cfg.projectId||'';
-    if(document.getElementById('fb_storageBucket')) document.getElementById('fb_storageBucket').value=cfg.storageBucket||'';
-    if(el_hint) el_hint.style.display='none';
-    try{ initFirebase(cfg); }catch(e){ console.warn('Firebase auto-connect failed:', e.message); }
-  } else {
-    if(el_hint) el_hint.style.display='block';
-  }
+  if(!cfg.apiKey) return;
+  ['apiKey','authDomain','projectId','storageBucket'].forEach(k=>{
+    const el=document.getElementById('fb_'+k); if(el) el.value=cfg[k]||'';
+  });
+  try{ initFirebase(cfg); }catch(e){ console.warn('Firebase auto-connect:',e.message); }
 }
 
 function connectFirebase(){
   const cfg={
-    apiKey:document.getElementById('fb_apiKey').value.trim(),
+    apiKey:    document.getElementById('fb_apiKey').value.trim(),
     authDomain:document.getElementById('fb_authDomain').value.trim(),
-    projectId:document.getElementById('fb_projectId').value.trim(),
+    projectId: document.getElementById('fb_projectId').value.trim(),
     storageBucket:document.getElementById('fb_storageBucket').value.trim()
   };
   if(!cfg.apiKey||!cfg.projectId){ showToast('❌ Vui lòng nhập API Key và Project ID!','error'); return; }
+  if(!cfg.storageBucket) showToast('⚠️ Chưa có Storage Bucket — PDF sẽ không đồng bộ được!','info',5000);
   try{
     initFirebase(cfg);
-    // Lưu config local
-    _storeSet(FB_CONFIG_KEY, JSON.stringify(cfg));
-    // Lưu config lên Firestore để các thiết bị khác tự động kết nối
+    _storeSet(FB_CONFIG_KEY,JSON.stringify(cfg));
     saveConfigToFirestore(cfg);
     showToast('✅ Kết nối Firebase thành công!');
     syncToFirebase();
-  }catch(e){ showToast('❌ Lỗi kết nối Firebase: '+e.message,'error'); }
+  }catch(e){ showToast('❌ Lỗi kết nối: '+e.message,'error'); }
 }
 
 async function saveConfigToFirestore(cfg){
   if(!fbDB) return;
-  try{
-    // Lưu config vào collection _config (không nhạy cảm, chỉ là project config)
-    await fbDB.collection('_config').doc('app').set({
-      fbConfig: JSON.stringify(cfg),
-      updatedAt: new Date().toISOString()
-    });
-  }catch(e){ console.warn('Không thể lưu config lên Firestore:', e); }
-}
-
-// Khi mở app: thử lấy config từ URL params hoặc Firestore
-async function tryAutoConnectFromCloud(){
-  // Thử kết nối bằng config đã biết projectId từ URL hash
-  // URL format: yourapp.html#pid=project-id
-  const hash=location.hash.slice(1);
-  const params=new URLSearchParams(hash);
-  const pid=params.get('pid');
-  if(pid && !_storeGet(FB_CONFIG_KEY)){
-    // Thử bootstrap từ projectId: dùng anonymous Firestore REST để lấy config
-    try{
-      const res=await fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/_config/app`);
-      if(res.ok){
-        const data=await res.json();
-        const cfgStr=data?.fields?.fbConfig?.stringValue;
-        if(cfgStr){
-          const cfg=JSON.parse(cfgStr);
-          _storeSet(FB_CONFIG_KEY, JSON.stringify(cfg));
-          initFirebase(cfg);
-          console.log('✅ Auto-connected from Firestore config');
-        }
-      }
-    }catch(e){ console.warn('Auto-connect from URL failed:', e); }
-  }
+  try{ await fbDB.collection('_config').doc('app').set({fbConfig:JSON.stringify(cfg),updatedAt:new Date().toISOString()}); }
+  catch(e){ console.warn('Lưu config Firestore thất bại:',e); }
 }
 
 function initFirebase(cfg){
   try{
-    if(firebase.apps.length===0){ fbApp=firebase.initializeApp(cfg); }
-    else { fbApp=firebase.apps[0]; }
+    if(!firebase.apps.length){ fbApp=firebase.initializeApp(cfg); }
+    else{ fbApp=firebase.apps[0]; }
     fbDB=firebase.firestore(fbApp);
+    // Khởi tạo Storage nếu có storageBucket
+    fbSt=null;
+    if(cfg.storageBucket){
+      try{ fbSt=firebase.storage(fbApp); console.log('✅ Firebase Storage ready'); }
+      catch(e){ console.warn('Storage init failed:',e.message); }
+    }
     firebaseConnected=true;
-    document.getElementById('fbStatus').textContent='● Đã kết nối';
+    const hasSt=!!fbSt;
+    document.getElementById('fbStatus').textContent='● Đã kết nối'+(hasSt?' + Storage':'');
     document.getElementById('fbStatus').className='firebase-status connected';
     document.getElementById('syncDot').className='sync-dot';
-    document.getElementById('syncText').textContent='Firebase';
+    document.getElementById('syncText').textContent=hasSt?'Firebase+Storage':'Firebase';
     document.getElementById('btnSync').style.display='inline-flex';
-    // Thêm nút copy link kết nối
     updateShareLink(cfg.projectId);
     // Realtime listeners
     fbDB.collection('docs').onSnapshot(snap=>{
@@ -2873,144 +2899,206 @@ function initFirebase(cfg){
       pets=snap.docs.map(d=>({...d.data(),id:d.id}));
       saveLocal(); renderAll();
     });
-    // Realtime sync officers
     fbDB.collection('_config').doc('officers').onSnapshot(snap=>{
-      const data=snap.data();
-      if(data?.list){
-        officers=data.list;
-        _storeSet('pb_officers',JSON.stringify(officers));
-        populateOfficerDropdowns();
-      }
+      const d=snap.data();
+      if(d?.list){ officers=d.list; _storeSet('pb_officers',JSON.stringify(officers)); populateOfficerDropdowns(); }
     });
   }catch(e){ firebaseConnected=false; throw e; }
 }
 
-function updateShareLink(projectId){
-  if(!projectId) return;
-  const link=location.href.split('#')[0]+'#pid='+projectId;
-  const shareEl=document.getElementById('fbShareLink');
-  const shareWrap=document.getElementById('fbShareLinkWrap');
-  if(shareEl){ shareEl.value=link; }
-  if(shareWrap){ shareWrap.style.display='block'; }
+function updateShareLink(pid){
+  if(!pid) return;
+  const link=location.href.split('#')[0]+'#pid='+pid;
+  const el=document.getElementById('fbShareLink'); if(el) el.value=link;
+  const wrap=document.getElementById('fbShareLinkWrap'); if(wrap) wrap.style.display='block';
 }
-
 function copyShareLink(){
-  const el=document.getElementById('fbShareLink');
-  if(!el) return;
-  navigator.clipboard?.writeText(el.value).then(()=>showToast('✅ Đã sao chép link kết nối!'))
+  const el=document.getElementById('fbShareLink'); if(!el) return;
+  navigator.clipboard?.writeText(el.value).then(()=>showToast('✅ Đã sao chép link!'))
     .catch(()=>{ el.select(); document.execCommand('copy'); showToast('✅ Đã sao chép!'); });
 }
-
 function disconnectFirebase(){
-  firebaseConnected=false; fbDB=null;
+  firebaseConnected=false; fbDB=null; fbSt=null;
   document.getElementById('fbStatus').textContent='● Chưa kết nối';
   document.getElementById('fbStatus').className='firebase-status disconnected';
   document.getElementById('syncDot').className='sync-dot off';
   document.getElementById('syncText').textContent='Offline';
   document.getElementById('btnSync').style.display='none';
   _storeRemove(FB_CONFIG_KEY);
-  const shareWrap=document.getElementById('fbShareLinkWrap');
-  if(shareWrap) shareWrap.style.display='none';
+  const wrap=document.getElementById('fbShareLinkWrap'); if(wrap) wrap.style.display='none';
 }
 
 async function syncToFirebase(){
   if(!fbDB){ showToast('❌ Chưa kết nối Firebase!','error'); return; }
   try{
     const batch=fbDB.batch();
-    docs.forEach(d=>{ const ref=fbDB.collection('docs').doc(d.id); batch.set(ref,stripFileData(d)); });
-    pets.forEach(p=>{ const ref=fbDB.collection('pets').doc(p.id); batch.set(ref,stripFileData(p)); });
+    docs.forEach(d=>batch.set(fbDB.collection('docs').doc(d.id),stripFileData(d)));
+    pets.forEach(p=>batch.set(fbDB.collection('pets').doc(p.id),stripFileData(p)));
     await batch.commit();
-    // Sync officers
     await fbDB.collection('_config').doc('officers').set({list:officers,updatedAt:new Date().toISOString()});
-    showToast('✅ Đồng bộ Firebase thành công!');
-  }catch(e){ showToast('❌ Lỗi đồng bộ: '+e.message,'error'); }
+    showToast('✅ Đồng bộ metadata thành công!');
+  }catch(e){ showToast('❌ Lỗi: '+e.message,'error'); }
 }
 
-function stripFileData(rec){
-  const c={...rec}; delete c.fileContentData; delete c.fileResultData; return c;
+function stripFileData(r){ const c={...r}; delete c.fileContentData; delete c.fileResultData; return c; }
+function syncDocToFirebase(r){ if(fbDB){ fbDB.collection('docs').doc(r.id).set(stripFileData(r)).catch(()=>{}); syncOfficersToFirebase(); } }
+function syncPetToFirebase(r){ if(fbDB) fbDB.collection('pets').doc(r.id).set(stripFileData(r)).catch(()=>{}); }
+function syncOfficersToFirebase(){ if(fbDB) fbDB.collection('_config').doc('officers').set({list:officers,updatedAt:new Date().toISOString()}).catch(()=>{}); }
+function deleteDocFromFirebase(id){ if(fbDB) fbDB.collection('docs').doc(id).delete().catch(()=>{}); }
+function deletePetFromFirebase(id){ if(fbDB) fbDB.collection('pets').doc(id).delete().catch(()=>{}); }
+
+// ============ PDF SYNC — Firebase Storage (ưu tiên) + Firestore chunks (fallback) ============
+
+// Convert base64 dataURL → Blob
+function b64toBlob(b64){
+  const raw=b64.includes(',')?b64.split(',')[1]:b64;
+  const bytes=atob(raw);
+  const ab=new ArrayBuffer(bytes.length);
+  const ia=new Uint8Array(ab);
+  for(let i=0;i<bytes.length;i++) ia[i]=bytes.charCodeAt(i);
+  return new Blob([ab],{type:'application/pdf'});
 }
 
-function syncDocToFirebase(rec){
-  if(!fbDB) return;
-  fbDB.collection('docs').doc(rec.id).set(stripFileData(rec)).catch(e=>console.error(e));
-  // Sync officers khi thêm văn bản (officers có thể đã thay đổi)
-  syncOfficersToFirebase();
-}
-function syncPetToFirebase(rec){
-  if(!fbDB) return;
-  fbDB.collection('pets').doc(rec.id).set(stripFileData(rec)).catch(e=>console.error(e));
-}
-function syncOfficersToFirebase(){
-  if(!fbDB) return;
-  fbDB.collection('_config').doc('officers').set({list:officers,updatedAt:new Date().toISOString()}).catch(()=>{});
-}
-function deleteDocFromFirebase(id){
-  if(fbDB) fbDB.collection('docs').doc(id).delete().catch(()=>{});
+// Convert ArrayBuffer/Blob → base64 dataURL
+function blobToB64(blob){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res(e.target.result);
+    r.onerror=rej;
+    r.readAsDataURL(blob);
+  });
 }
 
-// ============ PDF SYNC VIA FIRESTORE (Base64 chunked) ============
-// Firestore max doc = 1MB. PDF base64 ~1.33x, split into 600KB chunks để an toàn
-const PDF_CHUNK_SIZE = 600000;
-
-async function savePdfToFirebase(entityType, id, fileType, base64Data){
-  if(!fbDB || !base64Data) return false;
-  try{
-    const total=base64Data.length;
-    const numChunks=Math.ceil(total/PDF_CHUNK_SIZE);
-    // Lưu từng chunk tuần tự (tránh lỗi batch limit)
-    for(let i=0;i<numChunks;i++){
-      const chunk=base64Data.slice(i*PDF_CHUNK_SIZE,(i+1)*PDF_CHUNK_SIZE);
-      await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`).set({data:chunk,idx:i});
-    }
-    // Lưu metadata sau cùng (khi tất cả chunks đã xong)
-    await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).set({
-      numChunks, total, updatedAt:new Date().toISOString(), ok:true
+// Lưu file vào IDB local + đồng bộ cloud (Storage hoặc Firestore)
+async function saveFileToIDB(entityType, id, fileType, base64Data){
+  if(!base64Data) return;
+  // 1. Lưu IDB local ngay lập tức
+  await idbSet(`${entityType}_${id}_${fileType}`, base64Data);
+  // 2. Đồng bộ cloud nền (không chặn UI)
+  if(firebaseConnected){
+    const sizeMB=(base64Data.length/1024/1024).toFixed(1);
+    showToast(`☁️ Đang tải PDF lên cloud (${sizeMB}MB)…`,'info',10000);
+    savePdfToCloud(entityType, id, fileType, base64Data).then(ok=>{
+      if(ok) showToast('✅ PDF đã lưu lên cloud!');
+      else showToast('⚠️ PDF lưu local thành công. Cloud chưa đồng bộ (kiểm tra Storage rules).','info',5000);
     });
-    console.log(`📎 PDF→Firebase OK: ${entityType}_${id}_${fileType} (${numChunks} chunks, ${(total/1024).toFixed(0)}KB)`);
-    return true;
-  }catch(e){
-    console.warn('PDF Firebase sync failed:', e.message||e);
-    return false;
   }
 }
 
-async function loadPdfFromFirebase(entityType, id, fileType){
+// Lấy file: IDB local trước → fallback cloud
+async function getFileFromIDB(entityType, id, fileType){
+  const local=await idbGet(`${entityType}_${id}_${fileType}`);
+  if(local) return local;
+  if(!firebaseConnected) return null;
+  showToast('☁️ Tải PDF từ cloud…','info',10000);
+  const data=await loadPdfFromCloud(entityType, id, fileType);
+  if(data){
+    await idbSet(`${entityType}_${id}_${fileType}`, data);
+    showToast('✅ Đã tải PDF từ cloud!');
+  }
+  return data;
+}
+
+// Xóa local + cloud
+async function deleteFilesFromIDB(entityType, id){
+  await idbDel(`${entityType}_${id}_content`);
+  await idbDel(`${entityType}_${id}_result`);
+  if(firebaseConnected){
+    deletePdfFromCloud(entityType, id,'content').catch(()=>{});
+    deletePdfFromCloud(entityType, id,'result').catch(()=>{});
+  }
+}
+
+// ——— Lưu PDF lên cloud: Storage trước, Firestore chunks làm fallback ———
+async function savePdfToCloud(entityType, id, fileType, b64){
+  // Thử Firebase Storage trước
+  if(fbSt){
+    try{
+      const path=`pdfs/${entityType}_${id}_${fileType}.pdf`;
+      const ref=fbSt.ref(path);
+      const blob=b64toBlob(b64);
+      await ref.put(blob,{contentType:'application/pdf',customMetadata:{entityType,id,fileType}});
+      const url=await ref.getDownloadURL();
+      // Lưu URL vào Firestore để thiết bị khác biết
+      await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).set({
+        url, path, size:blob.size, backend:'storage',
+        updatedAt:new Date().toISOString(), ok:true
+      });
+      console.log(`✅ PDF→Storage: ${path} (${(blob.size/1024).toFixed(0)}KB)`);
+      return true;
+    }catch(e){
+      console.warn('Storage upload failed:',e.code,e.message);
+      // Nếu Storage lỗi (rules, quota...) → thử Firestore chunks
+    }
+  }
+  // Fallback: Firestore chunks (không cần Storage)
+  if(fbDB){
+    try{
+      const CHUNK=600000;
+      const numChunks=Math.ceil(b64.length/CHUNK);
+      for(let i=0;i<numChunks;i++){
+        await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`)
+          .set({data:b64.slice(i*CHUNK,(i+1)*CHUNK),idx:i});
+      }
+      await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).set({
+        numChunks, total:b64.length, backend:'firestore',
+        updatedAt:new Date().toISOString(), ok:true
+      });
+      console.log(`✅ PDF→Firestore: ${numChunks} chunks`);
+      return true;
+    }catch(e){ console.warn('Firestore chunks failed:',e.message); }
+  }
+  return false;
+}
+
+// ——— Tải PDF từ cloud ———
+async function loadPdfFromCloud(entityType, id, fileType){
   if(!fbDB) return null;
   try{
     const metaSnap=await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).get();
-    if(!metaSnap.exists || !metaSnap.data()?.ok) return null;
-    const {numChunks}=metaSnap.data();
-    const chunks=new Array(numChunks);
-    // Tải tất cả chunks song song để nhanh hơn
-    const promises=[];
-    for(let i=0;i<numChunks;i++){
-      promises.push(
+    if(!metaSnap.exists||!metaSnap.data()?.ok) return null;
+    const meta=metaSnap.data();
+
+    if(meta.backend==='storage'&&meta.url){
+      // Tải từ Firebase Storage URL
+      const res=await fetch(meta.url);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const blob=new Blob([await res.arrayBuffer()],{type:'application/pdf'});
+      return await blobToB64(blob);
+    }
+
+    if(meta.backend==='firestore'&&meta.numChunks){
+      // Tải Firestore chunks song song
+      const chunks=new Array(meta.numChunks);
+      await Promise.all(Array.from({length:meta.numChunks},(_,i)=>
         fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`).get()
-          .then(snap=>{ if(snap.exists) chunks[i]=snap.data().data; })
-      );
+          .then(s=>{ if(s.exists) chunks[i]=s.data().data; })
+      ));
+      if(chunks.some(c=>!c)) return null;
+      return chunks.join('');
     }
-    await Promise.all(promises);
-    // Kiểm tra tất cả chunks đều có
-    if(chunks.some(c=>!c)){
-      console.warn('PDF load: missing chunks');
-      return null;
-    }
-    return chunks.join('');
-  }catch(e){ console.warn('PDF load from Firebase failed:', e.message||e); return null; }
+  }catch(e){ console.warn('loadPdfFromCloud:',e.message); }
+  return null;
 }
 
-async function deletePdfFromFirebase(entityType, id, fileType){
+// ——— Xóa PDF khỏi cloud ———
+async function deletePdfFromCloud(entityType, id, fileType){
   if(!fbDB) return;
   try{
     const metaSnap=await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).get();
     if(!metaSnap.exists) return;
-    const {numChunks}=metaSnap.data();
-    const dels=[fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).delete()];
-    for(let i=0;i<numChunks;i++){
-      dels.push(fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`).delete());
+    const meta=metaSnap.data();
+    // Xóa Storage file
+    if(meta.path&&fbSt){ fbSt.ref(meta.path).delete().catch(()=>{}); }
+    // Xóa Firestore chunks
+    if(meta.numChunks){
+      const dels=[];
+      for(let i=0;i<meta.numChunks;i++)
+        dels.push(fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`).delete());
+      await Promise.all(dels);
     }
-    await Promise.all(dels);
-  }catch(e){ console.warn('PDF delete from Firebase failed:', e.message||e); }
+    await fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}`).delete();
+  }catch(e){ console.warn('deletePdfFromCloud:',e.message); }
 }
 
 // ============ INIT ============
