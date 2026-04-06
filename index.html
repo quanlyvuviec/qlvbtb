@@ -3110,7 +3110,42 @@ async function loadPdfFromCloud(entityType, id, fileType){
   }catch(e){ console.warn('loadPdfFromCloud:',e.message); }
   return null;
 }
+// ——— Hàm hiển thị PDF hỗ trợ tốt cho Di động ———
+async function viewPdf(entityType, id, fileType) {
+  // 1. Lấy dữ liệu Base64 từ Firebase
+  const dataUrl = await loadPdfFromCloud(entityType, id, fileType);
+  
+  if (!dataUrl) {
+    alert("Không tìm thấy file PDF hoặc lỗi tải dữ liệu!");
+    return;
+  }
 
+  try {
+    // 2. Chuyển đổi chuỗi Base64 thành Blob (Giúp di động không bị lỗi "File not found")
+    const base64Data = dataUrl.split(',')[1];
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    
+    // 3. Tạo một đường dẫn tạm thời cho file
+    const fileURL = URL.createObjectURL(blob);
+
+    // 4. Mở file
+    const newWindow = window.open(fileURL, '_blank');
+    
+    // 5. Xử lý trường hợp trình duyệt di động chặn Popup
+    if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+        window.location.href = fileURL; // Mở trực tiếp trên tab hiện tại nếu bị chặn
+    }
+  } catch (e) {
+    console.error("Lỗi khi mở PDF:", e);
+    alert("Trình duyệt di động của bạn không hỗ trợ xem file theo cách này.");
+  }
+}
 // ——— Xóa PDF khỏi cloud ———
 async function deletePdfFromCloud(entityType, id, fileType){
   if(!fbDB) return;
