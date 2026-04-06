@@ -5,14 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quản Lý Văn Bản Đến & Tin Báo Tố Giác | Công An Nhân Dân</title>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-<!-- JSZip: tạo file DOCX chuẩn (tải 1 lần, hoạt động offline) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<!-- SheetJS: xuất Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
@@ -370,7 +367,6 @@
 </head>
 <body>
 
-<!-- ==================== LOGIN ==================== -->
 <div id="loginScreen">
   <div class="login-box">
     <div class="login-emblem">🛡️</div>
@@ -387,9 +383,7 @@
   </div>
 </div>
 
-<!-- ==================== APP ==================== -->
 <div id="app">
-  <!-- TOPBAR -->
   <div class="topbar">
     <button class="topbar-menu-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
     <div class="topbar-logo">🛡️</div>
@@ -407,7 +401,6 @@
     </div>
   </div>
 
-  <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="nav-section">Chức năng chính</div>
     <div class="nav-item active" onclick="showPage('dashboard')" data-page="dashboard">
@@ -435,12 +428,8 @@
     <div class="nav-item" onclick="showPage('settings')" data-page="settings">
       <span class="icon">⚙️</span> Cài đặt
     </div>
-  </div><!-- /sidebar -->
+  </div><div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-  <!-- Sidebar overlay for mobile -->
-  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-
-  <!-- Mobile bottom navigation -->
   <nav class="mobile-nav">
     <div class="mobile-nav-grid">
       <button class="mobile-nav-item active" id="mni-dashboard" onclick="showPage('dashboard');closeSidebar()">
@@ -471,7 +460,6 @@
   </nav>
   <div class="main">
 
-    <!-- ========= DASHBOARD ========= -->
     <div class="page active" id="page-dashboard">
       <div class="page-header">
         <div class="page-header-left">
@@ -493,7 +481,6 @@
       </div>
     </div>
 
-    <!-- ========= DOCS ========= -->
     <div class="page" id="page-docs">
       <div class="page-header">
         <div class="page-header-left">
@@ -533,7 +520,6 @@
       </div>
     </div>
 
-    <!-- ========= PETITIONS ========= -->
     <div class="page" id="page-petitions">
       <div class="page-header">
         <div class="page-header-left">
@@ -569,7 +555,6 @@
       </div>
     </div>
 
-    <!-- ========= WARNINGS ========= -->
     <div class="page" id="page-warnings">
       <div class="page-header">
         <div class="page-header-left">
@@ -580,7 +565,6 @@
       <div id="warningsContent"></div>
     </div>
 
-    <!-- ========= THỐNG KÊ ========= -->
     <div class="page" id="page-stats">
       <div class="page-header">
         <div class="page-header-left">
@@ -588,7 +572,6 @@
           <p>Thống kê theo cán bộ thực hiện và kết quả xử lý</p>
         </div>
       </div>
-      <!-- Tab chọn loại -->
       <div style="display:flex;gap:0;margin-bottom:20px;border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;width:fit-content">
         <button id="statsTabDocs" class="btn" style="border-radius:0;border:none;background:var(--navy);color:#fff;font-weight:700" onclick="switchStatsTab('docs')">📋 Văn bản đến</button>
         <button id="statsTabPets" class="btn" style="border-radius:0;border:none;background:#f8fafc;color:var(--text2)" onclick="switchStatsTab('pets')">📩 Đơn thư & Tin báo</button>
@@ -596,7 +579,6 @@
       <div id="statsContent"></div>
     </div>
 
-    <!-- ========= REPORT ========= -->
     <div class="page" id="page-report">
       <div class="page-header">
         <div class="page-header-left">
@@ -673,7 +655,6 @@
       </div>
     </div>
 
-    <!-- ========= SETTINGS ========= -->
     <div class="page" id="page-settings">
       <div class="page-header">
         <div class="page-header-left">
@@ -681,7 +662,6 @@
         </div>
       </div>
 
-      <!-- Firebase -->
       <div class="settings-card">
         <h3>🔥 Firebase — Đồng bộ đám mây
           <span class="firebase-status disconnected" id="fbStatus">● Chưa kết nối</span>
@@ -690,7 +670,6 @@
           Kết nối Firebase để đồng bộ văn bản, đơn thư và <b>file PDF</b> lên cloud — mọi thiết bị đều thấy dữ liệu giống nhau theo thời gian thực. <b>Storage Bucket</b> là bắt buộc để đồng bộ PDF.
         </div>
 
-        <!-- Import từ file txt -->
         <div style="background:#f0fdf4;border:1.5px dashed #22c55e;border-radius:8px;padding:12px 14px;margin-bottom:14px">
           <div style="font-weight:700;font-size:13px;color:#065f46;margin-bottom:6px">📄 Tự động điền từ file config — Không cần nhập tay</div>
           <div style="font-size:12px;color:var(--text2);margin-bottom:8px">
@@ -724,7 +703,6 @@
           <button class="btn btn-success" onclick="syncToFirebase()" id="btnSync" style="display:none">☁️ Đồng bộ metadata</button>
         </div>
 
-        <!-- Link chia sẻ -->
         <div id="fbShareLinkWrap" style="display:none;margin-top:14px">
           <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px">
             🔗 Link chia sẻ — Mở trên thiết bị khác để tự kết nối:
@@ -742,7 +720,6 @@
         </div>
       </div>
 
-      <!-- Officers -->
       <div class="settings-card">
         <h3>👮 Danh sách cán bộ</h3>
         <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -753,7 +730,6 @@
         <div id="officerList"></div>
       </div>
 
-      <!-- Backup -->
       <div class="settings-card">
         <h3>💾 Sao lưu & Khôi phục</h3>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -768,7 +744,6 @@
         </div>
       </div>
 
-      <!-- Account -->
       <div class="settings-card">
         <h3>🔑 Đổi tài khoản đăng nhập</h3>
         <div class="alert-box alert-info" style="font-size:12px;margin-bottom:14px">
@@ -797,11 +772,7 @@
       </div>
     </div>
 
-  </div><!-- /main -->
-</div><!-- /app -->
-
-<!-- ========= MODAL VĂN BẢN ========= -->
-<div class="modal-overlay" id="docModal">
+  </div></div><div class="modal-overlay" id="docModal">
   <div class="modal">
     <div class="modal-header">
       <h3 id="docModalTitle">Thêm văn bản đến mới</h3>
@@ -881,7 +852,6 @@
         </div>
       </div>
 
-      <!-- Mốc báo cáo -->
       <div id="baoCaoSection" style="display:none">
         <div class="form-section">
           <div class="form-section-title">⏰ Cài đặt mốc báo cáo & cảnh báo tự động</div>
@@ -900,7 +870,6 @@
               </div>
             </div>
           </div>
-          <!-- Multi date picker (cho Ngày/Tháng/Quý/Năm) -->
           <div id="multiDatePickerSection" style="display:none;margin-top:10px">
             <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">📅 Chọn nhiều ngày (giữ Ctrl/Cmd để chọn nhiều):</label>
             <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
@@ -915,7 +884,6 @@
         </div>
       </div>
 
-      <!-- File đính kèm -->
       <div class="form-section">
         <div class="form-section-title">📎 Tệp đính kèm (PDF)</div>
         <div class="form-grid">
@@ -950,7 +918,6 @@
   </div>
 </div>
 
-<!-- ========= MODAL ĐƠN THƯ ========= -->
 <div class="modal-overlay" id="petModal">
   <div class="modal">
     <div class="modal-header">
@@ -1035,10 +1002,8 @@
   </div>
 </div>
 
-<!-- Toast notifications -->
 <div id="toastContainer"></div>
 
-<!-- ========= PDF VIEWER MODAL ========= -->
 <div class="modal-overlay" id="pdfModal">
   <div class="modal pdf-modal">
     <div class="modal-header">
@@ -1055,7 +1020,6 @@
   </div>
 </div>
 
-<!-- ==================== SCRIPT ==================== -->
 <script>
 // ============ DATA STORE ============
 let docs = [];
@@ -1593,29 +1557,27 @@ function clearFile(inputId, rowId, dataKey){
   setFileDisplay(rowId, rowId.replace('Name','NameText'), null);
 }
 
-
+// ĐOẠN MỚI FIX: Khắc phục lỗi load PDF từ Firebase Storage không qua được bảo mật (CORS) trên điện thoại
 async function viewPdfById(id, type){
   const rec=[...docs,...pets].find(x=>x.id===id);
   if(!rec) return;
   const entityType=docs.find(x=>x.id===id)?'doc':'pet';
   const name=type==='content'?rec.fileContentName:rec.fileResultName;
 
-  // Mở modal với trạng thái loading ngay
   const modal=document.getElementById('pdfModal');
   document.getElementById('pdfModalTitle').textContent='⏳ Đang tải '+(name||'file.pdf')+'...';
   document.getElementById('pdfViewer').src='';
   modal.classList.add('open');
 
   try{
-    // 1. Thử IDB local (tức thì, không cần mạng)
     let data=await idbGet(`${entityType}_${id}_${type}`);
 
-    // 2. Fallback: tải từ cloud (Storage → Firestore chunks)
     if(!data && firebaseConnected){
       document.getElementById('pdfModalTitle').textContent='☁️ Đang tải PDF từ cloud…';
       data=await loadPdfFromCloud(entityType, id, type);
-      if(data){
-        await idbSet(`${entityType}_${id}_${type}`, data); // cache local
+      
+      if(data && !data.startsWith('http')){
+        await idbSet(`${entityType}_${id}_${type}`, data); 
       }
     }
 
@@ -1624,6 +1586,7 @@ async function viewPdfById(id, type){
       showToast('❌ File PDF chưa được đồng bộ lên cloud. Mở trên máy gốc → xem file để tự động tải lên.','error',6000);
       return;
     }
+    
     document.getElementById('pdfModalTitle').textContent='📄 '+(name||'file.pdf');
     openPdfViewerData(data, name||'file.pdf');
   }catch(err){
@@ -1634,9 +1597,24 @@ async function viewPdfById(id, type){
 
 let currentPdfData=null, currentPdfName='file.pdf', currentPdfBlobUrl=null;
 
-// Hàm chuyển base64 → BlobURL và hiển thị trong modal (không mở modal)
+// ĐOẠN MỚI FIX: Mở tự động qua Tab mới nếu dùng điện thoại, PC thì vẫn mở bằng popup
 function openPdfViewerData(data, name){
   currentPdfData=data; currentPdfName=name;
+  
+  const isMobile = window.innerWidth <= 768; 
+  
+  if (typeof data === 'string' && data.startsWith('http')) {
+     currentPdfBlobUrl = data; 
+     if (isMobile) {
+        document.getElementById('pdfModal').classList.remove('open');
+        window.open(data, '_blank'); 
+     } else {
+        document.getElementById('pdfViewer').src = data; 
+        document.getElementById('pdfModal').classList.add('open');
+     }
+     return;
+  }
+
   try{
     const b64=data.includes(',') ? data.split(',')[1] : data;
     const byteStr=atob(b64);
@@ -1644,12 +1622,18 @@ function openPdfViewerData(data, name){
     const ia=new Uint8Array(ab);
     for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
     const blob=new Blob([ab],{type:'application/pdf'});
-    if(currentPdfBlobUrl) URL.revokeObjectURL(currentPdfBlobUrl);
+    
+    if(currentPdfBlobUrl && !currentPdfBlobUrl.startsWith('http')) URL.revokeObjectURL(currentPdfBlobUrl);
     currentPdfBlobUrl=URL.createObjectURL(blob);
-    document.getElementById('pdfViewer').src=currentPdfBlobUrl;
-    document.getElementById('pdfModal').classList.add('open');
+    
+    if (isMobile) {
+        document.getElementById('pdfModal').classList.remove('open');
+        window.open(currentPdfBlobUrl, '_blank'); 
+    } else {
+        document.getElementById('pdfViewer').src=currentPdfBlobUrl;
+        document.getElementById('pdfModal').classList.add('open');
+    }
   }catch(e){
-    // Fallback: tải về trực tiếp
     const a=document.createElement('a');
     a.href=data; a.download=name; a.target='_blank'; a.click();
   }
@@ -1888,26 +1872,24 @@ function closeModal(id){
   setModalReadonly(id, false);
 }
 
+// ĐOẠN FIX LỖI TỰ PHỤC HỒI: Thêm await và kiểm tra Firebase cho Văn Bản
 async function deleteDoc(id){
   if(!confirm('Xóa văn bản này? Tệp đính kèm cũng sẽ bị xóa.')) return;
   
-  // 1. Ẩn dữ liệu trên màn hình ngay lập tức cho mượt UI
   docs = docs.filter(d => d.id !== id);
   renderAll(); 
   updateWarnBadge();
 
-  // 2. Xóa file đính kèm cục bộ
   await deleteFilesFromIDB('doc', id);
   saveLocal();
 
-  // 3. Xoá trên Firebase và ĐỢI kết quả (Bắt buộc dùng await)
   if (firebaseConnected) {
     try {
       showToast('⏳ Đang xóa dữ liệu trên hệ thống...', 'info');
       await fbDB.collection('docs').doc(id).delete();
     } catch (error) {
       showToast('❌ Lỗi xoá Firebase: ' + error.message, 'error');
-      return; // Dừng lại nếu xoá trên mạng thất bại
+      return; 
     }
   }
   
@@ -2032,18 +2014,16 @@ async function savePet(){
   showToast('✅ Đã lưu đơn thư thành công!');
 }
 
+// ĐOẠN FIX LỖI TỰ PHỤC HỒI: Thêm await và kiểm tra Firebase cho Đơn Thư
 async function deletePet(id){
   if(!confirm('Xóa đơn thư này? Tệp đính kèm cũng sẽ bị xóa.')) return;
   
-  // 1. Ẩn dữ liệu trên màn hình ngay lập tức
   pets = pets.filter(p => p.id !== id);
   renderAll();
 
-  // 2. Xóa file đính kèm cục bộ
   await deleteFilesFromIDB('pet', id);
   saveLocal();
 
-  // 3. Bổ sung lệnh xoá Firebase còn thiếu và ĐỢI kết quả
   if (firebaseConnected) {
     try {
       showToast('⏳ Đang xóa dữ liệu trên hệ thống...', 'info');
@@ -2683,7 +2663,6 @@ function renderStats(){
   const pct=data.length?Math.round(done/data.length*100):0;
 
   container.innerHTML=`
-  <!-- Summary Cards -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:22px">
     <div class="stat-card blue" style="background:linear-gradient(135deg,#0a2d4e,#1a5276);border:none">
       <div class="label" style="color:rgba(255,255,255,0.7)">Tổng ${label}</div>
@@ -2708,9 +2687,7 @@ function renderStats(){
     </div>
   </div>
 
-  <!-- Charts Row -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
-    <!-- Donut: Kết quả xử lý -->
     <div class="table-wrap" style="padding:20px">
       <div style="font-weight:800;color:var(--navy);font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px">
         <span style="background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:3px 8px;font-size:12px">Biểu đồ</span>
@@ -2721,7 +2698,6 @@ function renderStats(){
         <div class="donut-legend">${resultLegend}</div>
       </div>
     </div>
-    <!-- Bar: Cán bộ -->
     <div class="table-wrap" style="padding:20px">
       <div style="font-weight:800;color:var(--navy);font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px">
         <span style="background:#ede9fe;color:#4c1d95;border-radius:6px;padding:3px 8px;font-size:12px">Biểu đồ</span>
@@ -2731,7 +2707,6 @@ function renderStats(){
     </div>
   </div>
 
-  <!-- Detail Table -->
   <div class="table-wrap">
     <div style="padding:16px 18px;font-weight:800;color:var(--navy);font-size:14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
       📋 Chi tiết theo Cán bộ thực hiện
@@ -3081,7 +3056,7 @@ async function savePdfToCloud(entityType, id, fileType, b64){
   return false;
 }
 
-// ——— Tải PDF từ cloud ———
+// ĐOẠN FIX LỖI CORS: Trả thẳng URL nếu có link Storage thay vì fetch
 async function loadPdfFromCloud(entityType, id, fileType){
   if(!fbDB) return null;
   try{
@@ -3090,15 +3065,10 @@ async function loadPdfFromCloud(entityType, id, fileType){
     const meta=metaSnap.data();
 
     if(meta.backend==='storage'&&meta.url){
-      // Tải từ Firebase Storage URL
-      const res=await fetch(meta.url);
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const blob=new Blob([await res.arrayBuffer()],{type:'application/pdf'});
-      return await blobToB64(blob);
+      return meta.url; 
     }
 
     if(meta.backend==='firestore'&&meta.numChunks){
-      // Tải Firestore chunks song song
       const chunks=new Array(meta.numChunks);
       await Promise.all(Array.from({length:meta.numChunks},(_,i)=>
         fbDB.collection('_pdfs').doc(`${entityType}_${id}_${fileType}_c${i}`).get()
@@ -3110,42 +3080,7 @@ async function loadPdfFromCloud(entityType, id, fileType){
   }catch(e){ console.warn('loadPdfFromCloud:',e.message); }
   return null;
 }
-// ——— Hàm hiển thị PDF hỗ trợ tốt cho Di động ———
-async function viewPdf(entityType, id, fileType) {
-  // 1. Lấy dữ liệu Base64 từ Firebase
-  const dataUrl = await loadPdfFromCloud(entityType, id, fileType);
-  
-  if (!dataUrl) {
-    alert("Không tìm thấy file PDF hoặc lỗi tải dữ liệu!");
-    return;
-  }
 
-  try {
-    // 2. Chuyển đổi chuỗi Base64 thành Blob (Giúp di động không bị lỗi "File not found")
-    const base64Data = dataUrl.split(',')[1];
-    const byteCharacters = atob(base64Data);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'application/pdf' });
-    
-    // 3. Tạo một đường dẫn tạm thời cho file
-    const fileURL = URL.createObjectURL(blob);
-
-    // 4. Mở file
-    const newWindow = window.open(fileURL, '_blank');
-    
-    // 5. Xử lý trường hợp trình duyệt di động chặn Popup
-    if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-        window.location.href = fileURL; // Mở trực tiếp trên tab hiện tại nếu bị chặn
-    }
-  } catch (e) {
-    console.error("Lỗi khi mở PDF:", e);
-    alert("Trình duyệt di động của bạn không hỗ trợ xem file theo cách này.");
-  }
-}
 // ——— Xóa PDF khỏi cloud ———
 async function deletePdfFromCloud(entityType, id, fileType){
   if(!fbDB) return;
