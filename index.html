@@ -1890,14 +1890,29 @@ function closeModal(id){
 
 async function deleteDoc(id){
   if(!confirm('Xóa văn bản này? Tệp đính kèm cũng sẽ bị xóa.')) return;
-  docs=docs.filter(d=>d.id!==id);
+  
+  // 1. Ẩn dữ liệu trên màn hình ngay lập tức cho mượt UI
+  docs = docs.filter(d => d.id !== id);
+  renderAll(); 
+  updateWarnBadge();
+
+  // 2. Xóa file đính kèm cục bộ
   await deleteFilesFromIDB('doc', id);
   saveLocal();
-  if(firebaseConnected) deleteDocFromFirebase(id);
-  renderAll(); updateWarnBadge();
-  showToast('🗑️ Đã xóa văn bản.');
-}
 
+  // 3. Xoá trên Firebase và ĐỢI kết quả (Bắt buộc dùng await)
+  if (firebaseConnected) {
+    try {
+      showToast('⏳ Đang xóa dữ liệu trên hệ thống...', 'info');
+      await fbDB.collection('docs').doc(id).delete();
+    } catch (error) {
+      showToast('❌ Lỗi xoá Firebase: ' + error.message, 'error');
+      return; // Dừng lại nếu xoá trên mạng thất bại
+    }
+  }
+  
+  showToast('🗑️ Đã xóa văn bản hoàn toàn.');
+}
 // ============ PETITIONS ============
 let editingPetId=null;
 function openPetModal(pet=null){
@@ -2019,13 +2034,28 @@ async function savePet(){
 
 async function deletePet(id){
   if(!confirm('Xóa đơn thư này? Tệp đính kèm cũng sẽ bị xóa.')) return;
-  pets=pets.filter(p=>p.id!==id);
+  
+  // 1. Ẩn dữ liệu trên màn hình ngay lập tức
+  pets = pets.filter(p => p.id !== id);
+  renderAll();
+
+  // 2. Xóa file đính kèm cục bộ
   await deleteFilesFromIDB('pet', id);
   saveLocal();
-  renderAll();
-  showToast('🗑️ Đã xóa đơn thư.');
-}
 
+  // 3. Bổ sung lệnh xoá Firebase còn thiếu và ĐỢI kết quả
+  if (firebaseConnected) {
+    try {
+      showToast('⏳ Đang xóa dữ liệu trên hệ thống...', 'info');
+      await fbDB.collection('pets').doc(id).delete();
+    } catch (error) {
+      showToast('❌ Lỗi xoá Firebase: ' + error.message, 'error');
+      return;
+    }
+  }
+  
+  showToast('🗑️ Đã xóa đơn thư hoàn toàn.');
+}
 // ============ OFFICERS ============
 function renderOfficers(){
   populateOfficerDropdowns();
