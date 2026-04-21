@@ -1365,9 +1365,16 @@ function mkResultCell(text){
   const preview=short?t:(t.slice(0,26)+'…');
   const xe=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   if(short) return `<td style="font-size:12px;color:var(--text)">${xe(t)}</td>`;
-  return `<td class="result-cell">
-    <span class="result-text" onmouseenter="showResultTip(event,'${xe(t).replace(/'/g,'&#39;')}')" onmouseleave="hideResultTip()">${xe(preview)}</span>
-  </td>`;
+  return `<td class="result-cell"><span class="result-text" onmouseenter="showResultTip(event,'${xe(t).replace(/'/g,'&#39;')}')" onmouseleave="hideResultTip()">${xe(preview)}</span></td>`;
+}
+// Phiên bản chỉ trả nội dung bên trong (không bao <td>), dùng khi đã có <td> bên ngoài
+function mkResultContent(text){
+  const t=text||'';
+  const short=t.length<=28;
+  const preview=short?t:(t.slice(0,26)+'…');
+  const xe=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if(short) return `<span style="font-size:12px;color:var(--text)">${xe(t)}</span>`;
+  return `<span class="result-text" onmouseenter="showResultTip(event,'${xe(t).replace(/'/g,'&#39;')}')" onmouseleave="hideResultTip()">${xe(preview)}</span>`;
 }
 function showResultTip(e,text){
   hideResultTip();
@@ -1421,7 +1428,7 @@ function renderDocs(){
       <td class="td-truncate">${d.summary||''}</td>
       <td style="white-space:nowrap;font-size:12px">${isWarn?'<span style="color:var(--red-warn);font-weight:700">⚠️ ':''} ${fmtDate(d.deadline)}${isWarn?'</span>':''}</td>
       <td><span class="badge badge-${progColor}">${d.progress||'Chưa xử lý'}</span></td>
-      <td>${mkResultCell(d.result)}</td>
+      <td class="result-cell">${mkResultContent(d.result)}</td>
       <td style="font-size:12px;white-space:nowrap">${d.officer||''}</td>
       <td style="white-space:nowrap">
         ${d.fileContentName?`<button class="btn btn-sm btn-outline btn-icon" title="${d.fileContentName}" onclick="viewPdfById('${d.id}','content')">📄</button>`:''}
@@ -1951,7 +1958,7 @@ function renderPets(){
     <td style="white-space:nowrap;font-size:12px">${fmtDate(p.receivedDate)}</td>
     <td class="td-truncate">${p.summary||''}</td>
     <td><span class="badge badge-${progBadge[p.progress||'Chờ xử lý']||'gray'}">${p.progress||''}</span></td>
-    <td>${mkResultCell(p.result)}</td>
+    <td class="result-cell">${mkResultContent(p.result)}</td>
     <td style="font-size:12px;white-space:nowrap">${p.officer||''}</td>
     <td style="white-space:nowrap">
       ${p.fileContentName?`<button class="btn btn-sm btn-outline btn-icon" title="${p.fileContentName}" onclick="viewPdfById('${p.id}','content')">📄</button>`:''}
