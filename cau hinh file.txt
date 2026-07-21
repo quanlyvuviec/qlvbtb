@@ -1,0 +1,4 @@
+apiKey: "AIzaSyDR7D73e_K7zD-RmvJC1wNqN0kgMr7Sh6w"
+authDomain: "quan-ly-van-ban-don-thu.firebaseapp.com"
+projectId: "quan-ly-van-ban-don-thu"
+storageBucket: "quan-ly-van-ban-don-thu.firebasestorage.app"
